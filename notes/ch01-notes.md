@@ -1,4 +1,4 @@
-# Getting Started
+# Chapter 1: Getting Started
 Let's start Rust Journey!. There is a lot to learn but every journey starts somewhere. In this chapter we will discuss.
 
 + Installing Rust on Linux, macOS and Windows.
