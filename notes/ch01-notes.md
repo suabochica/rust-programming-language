@@ -5,6 +5,11 @@ Let's start Rust Journey!. There is a lot to learn but every journey starts some
 + Writing a program that prints `Hello, world!`
 + Using `cargo`, Rusts's packages manager and build.
 
+## Index
+1. Installation
+2. Hello, World!
+3. Hello, Cargo!
+
 ## 1.1. Installation
 The first step is to install Rust. We will download Rust through `rustup`, a command line tool for managing Rust versions and associated tools. You will need and Internet connection for the download.
 
