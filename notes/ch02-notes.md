@@ -1,4 +1,14 @@
 # Chapter 2: Programming a Guessing Game
+
+## Index
+1. Setting Up a New Project
+2. Processing a Guess
+3. Generating a Secret Number
+4. Comparing the Guess to the Secret Number
+5. Allowing Multiple Guesses with Looping
+
+
+
 Let's jump into Rust by working through a hands-on project together. The idea is introduces a few common Rust concepts by showing you how to use them in a real program. You will learn:
 
 + `let` and `match` methods
@@ -11,9 +21,9 @@ We will implement a guessing game:
 
 The program will generate a random integer between 1 and 100. It will then prompt the player to enter a guess. After a guess is entered, the program will indicate whether the guess is too low or too high. If the guess is correct, the game will print a congratulatory message and exit.
 
-## 2.1 Setting Up a New Project
+## 1. Setting Up a New Project
 
-Let'ts run the next command to make a new project using Cargo:
+Let's run the next command to make a new project using Cargo:
 
 ```
 $ cargo new guessing_game
@@ -32,7 +42,7 @@ Hello, world!
 
 To implement the guessing game, we will modify the contents of the `src/main.rs` file.
 
-## 2.2 Processing a Guess
+## 2. Processing a Guess
 The first part of the guessiong game program will ask for user input, process that inpunt, and check that the input is the expected form. To start let's enter the next code in `src/main.rs`
 
 ```rust
@@ -79,19 +89,19 @@ This code is printing a prompt stating what the game is and requesting input fro
 ### Storing values with Variables
 New we will create a place to store the user input, like this:
 
-```rs
+```rust
 let mut guess = String::new();
 ```
 
 Now the program is getting interesting. There is a lot going on this little line. Notice that this is a let statement, which is used to create a _variable_. Here is another example:
 
-```rs
+```rust
 let foo = bar;
 ```
 
 This line creates a new variable named `foo` and binds it to the value of the `bar` variable. In Rust, variables are immutable by default. We will discussing this concept in detail in the [Variables and Mutability](https://doc.rust-lang.org/book/ch03-01-variables-and-mutability.html#variables-and-mutability) section in Chapter 3. The following example shows how to use `mut` before the variable name to make a variable mutable.
 
-```rs
+```rust
 let foo = 5; // immutable
 let mut bar = 5; // mutable
 ```
@@ -108,7 +118,7 @@ To summarize, the `let mut guess = String::new` line has created a mutable varia
 
 Recall that we included the i/o functionality from the standard library with `use std::io` on the first line of the program. Now we will call the `stdin` function from the `io` module:
 
-```rs
+```rust
 io::stdin().read_line(&mut guess)
     .expect("Failed to read line");
 ```
@@ -124,7 +134,7 @@ The ampersand `&` indicates that this argument is a __reference_, which gives yo
 ### Handling Potential Failure with the `Result` Type.
 The second part of the method is:
 
-```rs
+```rust
 .expect("Failed to read line")
 ```
 
@@ -159,13 +169,13 @@ the right way to suppress the warning is to actually write error handling, but b
 ### Printing Values with `println!` Placeholders
 Aside from the closing curly brackets, there is only one more line to discuss in the code added so far, which is the following:
 
-```rs
+```rust
 println!("You guessed: {}", guess);
 ```
 
 This line print the string we saved the user's input in. The set of curly brackets `{}`, is a placeholder. Think of `{}` as a little crab pincers that hold a value in place. You can print more than one value using curly brackets. The first set of curly brackets holds the first values listed after format string, the second set holds the second values, and so on. Printing multiple values in one call to `println!` would look like this:
 
-```rs
+```rust
 let x = 5;
 let y = 10;
 
@@ -195,10 +205,10 @@ At this point, the first part of the game is done: we are getting input form the
 + [Result type](https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#handling-potential-failure-with-the-result-type)
 + [println!](https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html#printing-values-with-println-placeholders)
 
-## 2.2 Generating a Secret Number
+## 3 Generating a Secret Number
 Next, we need to generate a secret number that the user will try to guess. The secret number should be different every time so the is fun to play more than once. Let's use a random number functionality in its standard library. However, the Rust team does provide a `rand` crate.
 
-### 2.2.1 Using a Crate to Get More functionality
+### Using a Crate to Get More functionality
 Remember that a crate is a collection of Rust source code files. The project we have been building is a _binary crate_, with is an executable. The `rand` crate is a _library crate_, which contains code intended to be used in other programs.
 
 Cargo's use of external crates is where it really shines. Before we can write code that uses `rand`, we need to modify the _Cargo.toml_ file to include the `rand` crate as a dependency. Open that file an add the `rand` crate in the `[dependencies]` section.
@@ -247,12 +257,12 @@ $ cargo build
 
 These lines show Cargo only updates the build with your tiny change to the _src/main.rs_. Your dependencies have not changed, so Cargo knows it can reuse what it has already downloaded and compiled for those. It just rebuilds your part of the code.
 
-#### 2.2.1.1 Ensuring Rproducible Builds with _Cargo.lock File
+#### Ensuring Rproducible Builds with _Cargo.lock File
 Cargo has a mechanism that ensures you can rebuild the same artifact every time you builds code : Cargo will use only the versions of the dependencies you specified until you indicate otherwise. For example, what happens if next week version `0.5.6` of the `rand` crate comes out and contains and important bug fix but also contains a regression that will break your code?
 
 The answer to this problem is the _Cargo.lock_ file, which was created the first time you ran `cargo build` and is now in your _guessing_game_ directory. When you build a project for the first time, Cargo figures out all the version of the dependencies that fit the criteria and then writes them to the _Cargo.lock_ file. When you build your project in the future, Cargo will see thaht the _Cargo.lock_ file exists and use the versions specified there rather than doing all the work of figuring out versions again. This lets you have a reproducible build automatically. In other words, your project will remain at `0.5.5` until you explicitly upgrade, thank to the _Cargo.lock_ file.
 
-#### 2.2.1.2 Updating a Crate to Get a New Version
+#### Updating a Crate to Get a New Version
 When you do want to update a crate, Cargo provides another command `update`, which will ignore the _Cargo.lock_ file and figure out all the latest versions that fit your specifications in _Cargo.toml_. If that works, Cargo will write those versions to the _Cargo.lock_ file.
 
 But by default, Cargo will only look for versions greater than `0.5.5` and less than `0.6.0`. If the `rand` crate has released two versions, `0.5.5` and `0.6.0`, you would see the following if you ran `cargo update`.
@@ -276,10 +286,10 @@ The next time you run `cargo build`, Cargo will updated the registry of crates a
 
 There is a lot of more to say about Cargo and its ecosystem which we will discuss in chapter 14, but for now, that is all you need to know. Cargo makes it very easy to reuse libraries, so Rustaceans are able to write smaller projects that are assembled from number of packages.
 
-### 2.2.2 Generating a Random Number
+### Generating a Random Number
 Now that we have added the `rand` crate to _Cargo.toml_, lets start using `rand`. The next step is to update _src/main.rs_.
 
-```rs
+```rust
 use std::io;
 use rand::Rng;
 
@@ -316,10 +326,10 @@ Try to run the program a few times, and the random guess number will be differen
 + [Semantic Versioning](http://semver.org/)
 + [Cargo.io](https://crates.io/)
 
-## 2.3 Comparing the Guess to the Secret Number
+## 4. Comparing the Guess to the Secret Number
 Now that we have user input and a random, we can compare them. That step is shown below, but keep in mind that this code won't compile quite yet, as we will explain.
 
-```rs
+```rust
 use std::io;
 use std::cmp::Ordering;
 use rand::Rng;
@@ -374,7 +384,7 @@ Rust defaults to an `i32`, which is the type of `secret_number` unless you add a
 
 Ultimately, we want to convert the `String` the program reads as input into a real number type so we can compare it numerically to the secret number. We can do that by adding the following two lines in the `main` function body:
 
-```rs
+```rust
 let guess: u32 = guess.trim().parse()
     .expect("Please type a number!");
 ```
@@ -410,10 +420,10 @@ We have most of the game working now, but the user can make only one guess. Let'
 + [match control flow operator](https://doc.rust-lang.org/book/ch06-02-match.html)
 + [parse method](https://doc.rust-lang.org/std/primitive.str.html#method.parse)
 
-## 2.4 Allowing Multiple Guesses with Looping
+## 5. Allowing Multiple Guesses with Looping
 The `loop` keyboard creates an infinite loop. We will add that now to give users more chances at guessing the number:
 
-```rs
+```rust
 // --snip--
 
     println!("The secret number is: {}", secret_number);
@@ -463,10 +473,10 @@ error: Process didn't exit successfully: `target/debug/guess` (exit code: 101)
 
 Typing `quit` actually quits the game, but so will any other non-number input. However, this is sub optimal to say the least. We want the game to automatically stop when the correct number is guessed.
 
-### 2.4.1 Quitting After a Correct Guess
+### Quitting After a Correct Guess
 Let's program the game to quit when the user wins by adding a `break` statement.
 
-```rs
+```rust
 // --snip--
 
         match guess.cmp(&secret_number) {
@@ -483,10 +493,10 @@ Let's program the game to quit when the user wins by adding a `break` statement.
 
 Adding the `break` line after `You win!` makes the program exit the loop when the user guesses the secret number correctly. Exiting the loop also means exiting the program, because the loop is the last part of the `main`.
 
-### 2.4.2 Handling Invalid Input
+### Handling Invalid Input
 To further refine the game's behavior, rather than crashing the program when the user inputs a non-number, lets make the game ignore a non-number so the user can continue guessing. We can do that by altering the line were `guess` is converted from `String` to `u32`, as shown the next snippet.
 
-```rs
+```rust
 // --snip--
 
 io::stdin().read_line(&mut guess)
@@ -508,7 +518,7 @@ If `parse` is not able to turn the string into a number it will return an `Err` 
 
 Now everything in the program should work as expected. Awesome, just a tiny final tweak, we will finish the guessing game. Recall that the program is still printing the secret number. That worked well for testing, but it ruins the game. Let's delete the `println!` that outputs the secret number. So the final version is:
 
-```rs
+```rust
 use std::io;
 use std::cmp::Ordering;
 use rand::Rng;

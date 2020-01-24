@@ -70,7 +70,7 @@ Next, make a new source file and call it `main.rs` Rust files always end with th
 
 Now open the `main.rs` file a enter the next code:
 
-```rs
+```rust
 fn main() {
 	println("Hello, world!");
 }
@@ -91,7 +91,7 @@ If `Hello, world!` did print, congratulation! You have officially written a Rust
 ### Anatomy of a Rust Program
 Let's view in detail what just happened in your "Hello, world!" program. Here is the first piece of the puzzle.
 
-```rs
+```rust
 fn main() {
 
 }
@@ -105,7 +105,7 @@ Also, note that the function body is wrapped in curly brackets `{}`. Rust requir
 
 Inside the `main` function is the following code:
 
-```rs
+```rust
     println!("Hello, world!");
 ```
 
