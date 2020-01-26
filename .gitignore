@@ -4,5 +4,6 @@ variables/target/*
 functions/target/*
 branches/target/*
 loops/target/*
+rectangles/target/*
 
 **/.DS_Store
