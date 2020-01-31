@@ -496,5 +496,68 @@ The `__` pattern will match any value. By putting it after our other arms, the `
 However, the `match` expression can be a bit wordy in a situation in which we care about only _one_ of the cases. For this situation, Rust provides `if let`.
 
 ## 3. Concise Control Flow With If Let
+The `if let` syntax lets you combine `if` and `let` into a less verbose way to handle values that match one pattern while ignoring the rest. Consider the program below that matches on an `Option<u8>` value but only wants to execute code if the value is 3.
+
+```rust
+#![allow(unused_variables)]
+fn main() {
+let some_u8_value = Some(0u8);
+match some_u8_value {
+    Some(3) => println!("three"),
+    _ => (),
+}
+}
+```
+
+We want to do something with the `Some(3)` match but do nothing with any other `Some<u8>` value or the `None` value. To satisfy the `match` expression, we have to add `_ => ()` after processing just one variant, which is a lot of boilerplate code to add.
+
+Instead, we could write this a shorter way using `if let`. The following code behaves the same as the `match` in the last snippet.
+
+```rust
+
+#![allow(unused_variables)]
+fn main() {
+let some_u8_value = Some(0u8);
+if let Some(3) = some_u8_value {
+    println!("three");
+}
+}
+```
+
+The syntax `if let` takes a pattern and an expression separated by an equal sign. It works the same way as a `match`, where the expression is given to the `match` and the pattern its first arm.
+
+Using `if let` means less typing, less indentation, and less boilerplate code. However, you lose the exhaustive checking that `match` enforces. Choosing between `match` and `if let` depends on what you are doing in your particular situation and whether gaining conciseness is appropriate trade-off for losing exhaustive checking.
+
+In other words, you can think `if let` as syntax sugar for a `match` that runs code when the value matches one pattern and then ignores all other values.
+
+We can include `else` with an `if let`. The block of code that goes with the `else` is the same as the block of code that would go with the `_` case in the `match` expression that is equivalent to the `if let` and `else`. Recall the `Coin` enum definition in last section, where the `Quarter` variant also held a `UsState` value. If we wanted to count all non- quarter coins we see while also announcing the state of the quarters, we could do that with a `match` expression like this.
+
+```rust
+let mut count = 0;
+
+match coin {
+    Coin::Quarter(state) => println!("State quarter from {:?}", state),
+    _ => count += 1,
+}
+```
+Or we can use the `if let` and `else` expression like this:
+
+```rust
+let mut count = 0;
+
+if let Coin::Quarter(state) => coin {
+   println!("State quarter from {:?}", state);
+} else {
+    count += 1;
+}
+```
+
+If you have a situation in which your program has logic that is to verbose to express using `match`, remember that `if let` is in your Rust toolbox as well.
 
 ## Summary
+
+We have now covered how to use enums to create custom types that can be one of a set of enumerated values. We have shown how the standard library's `Option<T>` type helps you use the system to prevent errors. When enum values have data inside them, you can use `match` or `if let` to extract and use those values, depending on how many cases you need to handle.
+
+Your Rust programs can now express concepts in your domain using structs and enums. Creating custom types to use in your API ensures type safety. The compiler will make certain your functions get only values of the type each function expects.
+
+In order to provide a well organized API to your users that is straightforward to use and only exposes exactly what your users will need, let's now turn to Rust's modules.
