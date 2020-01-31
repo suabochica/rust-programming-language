@@ -47,9 +47,56 @@ Here we have a package that only contains `src/main.rs` meaning it only contains
 
 A crate will group related functionality together in a scope so the functionality is easy to share between multiple projects. For example, the `rand` crate used in the guessing number game, provides functionality that generates random numbers. We can use that functionality in our projects by bringing the `rand crate into our project's scope. All the functionality provided by the `rand` crate is accessible through a crate's name, `rand`.
 
-Keeping a crate's functionality in its own scope clarifies whether particular functionality is defined in our crate or the `rand` crate and prevents potential conflicts. For example, the `rand` crate provides a trait name `Rng`. we can also define `struct` named `Rng` in our crate. Because a crate's functionality is namespaced in its own scope, when we add `rand` as a dependency, the compiler is not confused about what the name `Rng` refers to. In our crate, it refers to the `struct Rng` that we defined. We would acces the `Rng` trait from the `rand` crate as `rand::Rng`.
+Keeping a crate's functionality in its own scope clarifies whether particular functionality is defined in our crate or the `rand` crate and prevents potential conflicts. For example, the `rand` crate provides a trait name `Rng`. we can also define `struct` named `Rng` in our crate. Because a crate's functionality is namespaced in its own scope, when we add `rand` as a dependency, the compiler is not confused about what the name `Rng` refers to. In our crate, it refers to the `struct Rng` that we defined. We would access the `Rng` trait from the `rand` crate as `rand::Rng`.
 
 ## 2. Defining Modules to Control Scope and Privacy
+_Modules_ let us organize code within a crate into groups for readability and easy reuse. Modules also control the _privacy_ items, which is whether an item can be used by outside code (public) or is internal implementation detail and not available for outside use (private).
+
+As an example, let's write a library crate that provides the functionality of a restaurant. We will define the signatures of functions but leave their bodies empty to concentrate on the organization of the code, rather than actually implement a restaurant code.
+
+In the restaurant industry, some parts of a restaurant are referred to as _front of house_ and others a_back of house_. Front of house is where customers are, this is where hosts seat customers, servers take orders and payment, and bartenders make drinks. Back of the house is where the chefs and cooks work in the kitchen, dishwasher clean up, and managers do administrative work.
+
+To structure our crate in the same way that a real restaurant works, we can organize the function into nested modules. Create a new library named `restaurant` by running `cargo new --lib restaurant`, then put the code in `src/lib.rs` to define some modules and function signatures.
+
+```rust
+mod front_of_house {
+    mod hosting {
+        fn add_to_waitlist() {}
+
+        fn seat_at_table() {}
+    }
+
+    mod serving {
+        fn take_order() {}
+
+        fn serve_order() {}
+
+        fn take_payment() {}
+    }
+}
+```
+
+We define a module by starting with the `mod` keyword and then specify the name of the module (`front_of_house`) and place curly bracket around the body of the module. Inside modules, we can have other modules, as in this case with `hosting` and `seving`. Modules can also hold definitions for other items, such as structs, enums, constants, traits, or functions.
+
+By using modules, we can group related definitions together and name why they are related. Programmers, using this code would have an easier time finding the definitions they wanted to use because they could navigate the code based on the groups rather that having to read through all the definitions. Programmers adding new functionality to this code would know where to place the code to keep the program organized.
+
+Earlier, we mentioned that `src/main.rs` and `src/lib.rs` are called crate roots. The reason for their name is that the contents of either of these two files form a module named `crate` at root of the crate's module structure, known as the **module tree**.
+
+```
+crate
+ └── front_of_house
+     ├── hosting
+     │   ├── add_to_waitlist
+     │   └── seat_at_table
+     └── serving
+         ├── take_order
+         ├── serve_order
+         └── take_payment
+```
+
+This tree shows how some of the modules nest inside one another. The three also shows that some modules are _siblings_ to each other, meaning they are defined in the same module. To continue with the family metaphor, if module A is contained inside module B, we say that module A is the child of module B and the module B is the _parent_ of module A. Notice that the entire module tree is rooted under the implicit module named `crate`.
+
+This module tree might remind you of the file system's directory tree on your computer. This is a very apt comparison. Just like directories in a file system, you use modules to organize your code. And just like files in a directory, we need a way to find our modules.
 
 ## 3. Paths to Referring to an Item in the Module Tree
 
