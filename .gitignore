@@ -6,5 +6,6 @@ branches/target/*
 loops/target/*
 rectangles/target/*
 enums/target/*
+restaurant/target/*
 
 **/.DS_Store
