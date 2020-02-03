@@ -482,6 +482,53 @@ This `use` statement brings all public items defined in `std::collections` into 
 The glob operator is often used when testing to bring everything under test into the `tests` module. We will talk about how write tests in chapter 11. The glob operator is also sometimes used as part of the prelude pattern. See the standard library documentation for more information of this pattern.
 
 ## 5. Separating Modules into Different Files
+So far, all the examples in this chapter defined multiple modules in one file. When modules get large, you might want to move their definitions to a separate file to make the code easier to navigate.
+
+For example, let's start moving the `front_of_house` module to its own file _src_front_of_house.rs_ by changing the crate root file so it contains the code shown below. In this case, the crate root file `src/lib.rs` but this procedure also works with the binary crates whose crate root file is _src/main.rs_
+
+```rust
+mod front_of_house;
+
+pub use crate::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+```
+
+And _src/front_of_house.rs_ gets definitions from the body of the `front_of_house` module, as we shown next.
+
+```rust
+
+#![allow(unused_variables)]
+fn main() {
+pub mod hosting {
+    pub fn add_to_waitlist() {}
+}
+}
+```
+
+Using a semicolon after `mod front_of_house` rather than using a block tells Rust to load the contents of the module from another file with the same name as the module. To continue with our example and extract the `hosting` module to its own file as well, we change _src/front_of_house.rs_ to contain only declaration of the `hosting` module.
+
+```rust
+// src/front_of_house
+
+pub mod hosting;
+```
+
+Then we create a _src/front_of_house_ directory and a file _src/front_of_file/hosting.rs_ to contain the definition made in the `hosting` module.
+
+```rust
+// src/front_of_house/hosting.rs
+pub fn add_to_waitlist() {}
+```
+
+The module tree remains the same, and the function call in `eat_at_restaurant` will work without any modification, even though the definitions live in different files/ This technique lets you move modules to new files as they grow in size.
+
+Note that the `pub use crate::front_of_house::hosting` statement in _src/lib.rs_ also has not changed, nor does `use` have any impact on what files are compiled as part of the crate. The `mod` keyword declares modules, and Rust looks in the file with the same name as the module for the code that goes into that module.
 
 ## Summary
+Rust lets you split a package into multiple crates and a crate into modules so you can refer to items defined in one module from another module. You can do this by specifying absolute or relative paths. These paths can be brought into scope with a `use` statement so you can use a shorter path for multiple uses of the item in that scope. Module code is private by default, but you can make definitions public by adding the `pub` keyword. 
 
