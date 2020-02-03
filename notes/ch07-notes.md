@@ -365,17 +365,123 @@ fn function2() -> IoResult<()> {
 }
 ```
 
-In the second `use` statement, we chose the new name `IoResult` dor the `std::io::Result` type, which won't conflict with the `Result` from `std::fmt` that we have also brought into scope. Both samples are considered idiomatic, so the choice is up to you.
+In the second `use` statement, we chose the new name `IoResult` for the `std::io::Result` type, which won't conflict with the `Result` from `std::fmt` that we have also brought into scope. Both samples are considered idiomatic, so the choice is up to you.
 
 ### Re-exporting Names with `pub use`
+When we bring a name into scope with the `use` keyword, the name available in the new scope is private. To enable the code that calls our code to refer to that name as if it had been defined in that code's scope. We can combine `pub` and `use`.This technique is called _re-exporting_ because we are bringing an item into scope but also making that item available for other to bring into their scope.
+
+In this version of the code we replace the `use` in the root by `pub use`.
+
+```rust
+mod front_of_house {
+    pub mod hosting {
+        pub fn add_to_waitlist() {}
+    }
+}
+
+pub use crate::front_of_house::hosting;
+
+pub fn eat_at_restaurant() {
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+    hosting::add_to_waitlist();
+}
+fn main() {}
+```
+
+By using `pub use`, external code can now call the `add_to_waitlist` function using `hosting::add_to_waitlist`. If we had not specified `pub use`, the `eat_at_restaurant` function could call `hosting::add_to_waitlist` in its scope, but external code could not take advantage of this new path.
+
+Re-exporting is useful when internal structure of your code is different from how programmers calling your code would think about the domain. For example, in this restaurant metaphor, the people running the restaurant think about the _front of house_ and _back of house_. But customers visiting a restaurant probably won't think about the parts of the restaurant in those terms. With `pub use`, we can write our code with one structure but expose a different structure. Doing so makes our library well organized for programmers working on the library and programmers calling the library. 
 
 ### Using External Packages
+When we programmed a guessing game project, we used an external package called `rand` to get random numbers. To use `rand` in our project, we added this line to _Cargo.toml_.
+
+```rust
+[dependencies]
+rand = "0.5.5"
+```
+
+Adding `rand` as a dependency in _Cargo.toml_ tells Cargo to download the `rand` package and any dependencies from [crates.io](https://crates.io/) and make `rand` available to our project.
+
+Then, to bring `rand` definitions into the scope of our package, we added a `use` line starting with the name of the package, `rand`, and listed the items we wanted to bring into scope. Recall that to generate the random number, we brought the `Rng` trait into scope and called the `rand::thread_rng` function.
+
+```rust
+use rand::Rng;
+fn main() {
+    let secret_number = rand::thread_rng().gen_range(1, 101);
+}
+```
+
+Member of the Rust community have made many packages available at crates.io, and pulling any of them into your package involves these same steps:
+
+1. Listing the packages in the respective section of the _Cargo.toml_ file.
+2. Using `use` to bring items into scope.
+
+Not that the standard library is also a crate that is external to our package. Because the standard library is shipped with the Rust language, we do not need to change _Cargo.toml_ to include `std`. But we need to refer to it with `use` to bring items form there into our package's scope. For example, with the `HashMap` we would use this line.
+
+```rust
+#![allow(unused_variables)]
+fn main() {
+    use std::collections::HashMap;
+}
+```
+
+This is an absolute path starting with `std`, the name of the standard library crate.
 
 ### Using Nested Paths to Clean Up Large `use` Lists
+If we are using multiple items defined in the same package or same module, listing each item on its own line can take up a lot of vertical space in our files. For example, these two `use` statements we had in the guessing game project bring items from `std` into scope.
+
+```rust
+use std::io
+use std::cmp::Ordering
+//--snip--
+```
+
+Instead, we can use nested paths to bring the same items into scope in one line. We do this by specifying the common part of the path, followed by two colons, and the curly brackets around a list of the parts of the paths that differ, as shown below.
+
+```rust
+use std::{cmp::Ordering, io}
+```
+
+In bigger programs, bringing many items into scope from the same package or module using nested paths can reduce the number of separate `use` statement needed by a lot.
+
+We can use a nested path at any level in a path, which is useful when combining two `use` statements that share a sub path. For example, the next snippet shows two `use` statements, one that brings `std::io` into scope and other that brings `std::io::Write` into scope:
+
+```rust
+#![allow(unused_variables)]
+fn main() {
+  use std::io;
+  use std::io::Write;
+}
+```
+
+The common part of these two paths is `std::io`, and that is the complete first path. To merge these two paths into on `use` statement, we can use `self` in the nested path as shown next.
+
+```rust
+
+#![allow(unused_variables)]
+fn main() {
+  use std::io::{self, Write};
+}
+```
+
+This line brings `std::io` and `std::io::Write` into scope.
 
 ### The Glob Operator
+If we want to bring _all_ public items defined in a path into scope, we can specify that path followed by `*` the glob operator.
 
+```rust
+#![allow(unused_variables)]
+fn main() {
+  use std::collections::*;
+}
+```
 
+This `use` statement brings all public items defined in `std::collections` into the current scope. Be careful when using the glob operator, because glob can make it harder to tell what names are in scope and where a name used in your program was defined.
 
-## 5. Separating Modules into Different Files.
+The glob operator is often used when testing to bring everything under test into the `tests` module. We will talk about how write tests in chapter 11. The glob operator is also sometimes used as part of the prelude pattern. See the standard library documentation for more information of this pattern.
+
+## 5. Separating Modules into Different Files
+
+## Summary
 
