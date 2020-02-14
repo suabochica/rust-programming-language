@@ -448,3 +448,135 @@ To summarize, strings are complicated. Different programming languages make diff
 Let's swith to something a bit less complex: Hash maps.
 
 ## 3. Storing Keys with Associated Values in Hash Map
+The last of our common collections is the _hash map_. The type `HashMap<K, V>` stores a mapping of keys of type `K` to values of type `V`, It does this via a _hashing function_ which determine how it places these keys an values into memory. Many programming languages support this kind of data structure, but they often use a different name, such as hash, map, object, hash table, dictionary, or associative array, just to name a few.
+
+Hash maps are useful when you want to look up data not by using and index, as you can with vectors, but by using a key that can be of any type. For example, in a game, you could keep track of each team's score in a hash map in which each key is a team's name and the value are each team's score. Give a team name, you can retrieve its score.
+
+We will go over the basic API of hash maps in this section, but many more goodies are hiding in the functions defined on `HashMap<K, V>` by the standard library. As always, check the standard library documentation for more information.
+
+### Creating a New Hash Map
+You can create an empty hash map with `new` and add elements with `insert`. In the next code, we are keeping track of the scores of two teams whose names are Blue and Yellow. The Blue team starts with 10 points, and the Yellow team starts with 50.
+
+```rust
+use std::collections:HashMap;
+
+let mut scores = HashMap::new();
+
+scores.insert(String::from("Blue"), 10);
+scores.insert(String::from("Yellow"), 50);
+```
+
+Note that we need to first `use` the `HashMap` from the collections portion of the standard library. Of our three common collections, this is the least often used, so it is not included in the features brought into scope automatically in the prelude. Hash maps are also have less support from the standard library; there is no built-in macro to construct them, for example.
+
+Just like vectors, hash maps store their data on the heap. This `HashMap` has keys of type `String` and values of types `i32`. Like vectors, hash maps are homogeneous. All of the keys must have the same type, and all the values must have the same type.
+
+Another way of constructing a hash map is by using the `collect` method on a vector of tuples, where each tuple consists of a key and its value. The `collect` method gathers data into a number of collection types, including `HasMap`. For example, if we had the team names and initial scores in two separate vectors, we could use `zip` method to create a vector of tuples where "Blue" is paired with 10, and so forth. Then we could use the `collect` method to turn that vector of tuples into a hash map, as shown below.
+
+```rust
+use std::collection::HashMap;
+
+let teams = vec![String::from("Blue"), String::from("Yellow")];
+let initial_scores = vec![10, 50];
+
+let scores: HashMap<_, _> =  teams.iter().zip(initial_scores.iter()).collect();
+```
+
+The type annotation `HashMap<_,_>` is needed because it is possible to `collect` into many different data structures and Rust does not know which you want unless you specify. For the parameters for the key and value types, however, we use underscores, and Rust can infer the types that the hash map contains based on the types of the data in the vectors.
+
+### Hash Map and Ownership
+For types that implement the `Copy` trait, like `i32`, the values are copied into the hash map. For owned values likes `String`, the values will moved and the hash map will be the owner of those values, as demonstrated here:
+
+```rust
+use std::collections::HashMap;
+
+let field_name = String::from("Favorite color");
+let field_value = String::from("Blue");
+
+let mut map = HashMap::new();
+map.insert(field_name, field_value);
+```
+
+We are not able to use the variables `field_name` and `field_value` after they have been moved into the hash map with the call to `insert`.
+
+If we insert references to values into the hash map, the values won't be moved into the hash map. The values that the references point must be valid for at least as long as the hash map is valid. We will talk more about these issue in the "Validating References with Lifetimes" section in chapter 10.
+
+### Accessing Values in a Hash Map
+We can get a values out of the hash map by providing its key to the `get` method as shown the next snippet.
+
+```rust
+use std::collections::HashMap;
+
+let mut scores = HashMap::new();
+
+scores.insert(String::from("Blue"), 10);
+scores.insert(String::from("Yellow"), 50);
+
+let team_name = String::from("Blue");
+let score = scores.get(&team_name)
+```
+
+Here, `score` will have the value that is associated with the Blue team, and the result will be `Some(&10)`. The result is wrapped in `Some` because `get` returns an `Option<&V>`. If there is no value for that key in the hash map, `get` will return `None`. The program will need to handle the `Option` in one of the ways we covered in chapter 6.
+
+We can iterate over each key/value pair in a hash map in a similar manner as we do with vectors, using a `for` loop:
+
+```rust
+use std::collections::HashMap;
+
+let mut scores = HashMap::new();
+
+scores.insert(String::from("Blue"), 10);
+scores.insert(String::from("Yellow"), 50);
+
+for (key, value) in &scores {
+    println!("{}: {}", key, value);
+}
+```
+This code will print each pair in an arbitrary order:
+
+```
+Yellow: 50,
+Blue: 10,
+```
+
+### Updating a Hash Map
+Although the number of keys and values is growable, each key can only have one value associated with it at a time. When you want to change the data in a hash map, you have to decide how to handle the case when a key already has a value assigned. You could replace the old value with the new value, completely disregarding the old value. You could keep the old value and ignore the new value, only adding the new value if the key _does not_ already have a value. Or you could combine the old value and the new value. Let's look at how to do each of these.
+
+#### Overwriting a Value
+If we insert a key and a value into a hash map and then insert that same key with a different value, the value associated with that key will be replaced. Even though the code below calls `insert` twice, the hash map will only contain one key/value pair because we are inserting the value for the Blue team's key both times. 
+
+```rust
+use std::collections::HashMap;
+
+let mut scores = HashMap::new();
+
+scores.insert(String::from("Blue"), 10);
+scores.insert(String::from("Blue"), 25);
+
+println!("{:>}", scores)
+```
+
+This code will print `{"Blue": 25}`. The original value of `10` has been overwritten.
+
+#### Only Inserting a Value if the Key Has No Value
+It is common to check whether a particular key has a value and, if it does not, insert a value for it. Hash map have a special API for this called `entry` that takes the key you want to check as a parameter. The return values of the `entry` method is an enum called `Entry` that represents a value that might or might not exist. Let's say we want to check whether the key for the Yellow team has a value associated with it. If it does not, we want to insert the value 50, and the same for the Blue team. Using the `entry` API, the code look like:
+
+```rust
+use std::collections::HashMap;
+
+let mut scores = HashMap::new();
+scores.insert(String::from("Blue"), 10);
+
+scores.entry(String::from("Yellow")).or_insert(50);
+scores.entry(String::from("Blue")).or_insert(50);
+
+println!("{:>}", scores)
+```
+
+The `or_insert` method on `Entry` is defined to return a mutable reference to the value for the corresponding `Entry` key if that key exists, and if not, inserts the parameter as the new value for this key and returns a mutable reference to the new value. This technique is much cleaner that writing the logic ourselves and, in addition, plays more nicely with the borrow checker.
+
+Running the code in Listing 8-25 will print `{"Yellow": 50, "Blue": 10}`. The first call to `entry` will insert the key for the Yellow team with the value 50 because the Yellow team does not have a value already. The second call to `entry` will not change the hash map because the Blue team already has the value 10.
+
+#### Updating a Value Based on the Old Value
+
+### Hashing Functions
+### Summary
