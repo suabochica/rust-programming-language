@@ -577,6 +577,37 @@ The `or_insert` method on `Entry` is defined to return a mutable reference to th
 Running the code in Listing 8-25 will print `{"Yellow": 50, "Blue": 10}`. The first call to `entry` will insert the key for the Yellow team with the value 50 because the Yellow team does not have a value already. The second call to `entry` will not change the hash map because the Blue team already has the value 10.
 
 #### Updating a Value Based on the Old Value
+Another common use case for hash maps is to look up a key's value and then update it based on the old value. For instance, the next snippet shows code that counts how many times each word appears in some text. We use a has map with the words as keys and icrement the value to keep track of how many times we have seen that word. If it is the first time we have seen a word, we will first insert the value 0.
+
+```js
+use std::collections::HashMap;
+
+let text = "hello world wonderful world";
+
+let mut map = HashMap::new();
+
+for word in text.split_whitespace() {
+    let count = map.entry(word).or_insert(0);
+    *count += 1;
+}
+println!("{:?}", map);
+```
+
+This code will print `{"world": 2, "hello": 1, "wonderful": 1}`. The `or_insert` method actually returns a mutable reference (`&mut V`) to the value for this key. Here we store that mutable reference in the `count` variable, so in order to assign to that value, we must first dereference `count` using the asterisk (`*`). The mutable reference goes out of scope at the end of the `for` loop, so all of these changes are safe and allowed by the borrowing rules.
 
 ### Hashing Functions
+By default, `HashMap` uses a "cryptographically strong" hashing function that can provide resistance to Denial od Service (DoS) attacks. This is not the fastest hashing algorithm available, but the trade-off for better security that come with the drop in performance is worth it. If you profile your code and find that the default hash function is too slow for your purposes, you can switch to another function by specifying a different _hasher_. A hasher is a type that implements the `BuildHasher` trait. We will talk about traits and how to implement them in chapter 10. You do not necessarily have to implement your own hasher from scratch. Crates.io has libraries shared by other Rust users that provide hashers implementing many common hashing algorithms.
+
+### Links
++ [SipHash](https://www.131002.net/siphash/siphash.pdf)
+
 ### Summary
+Vectors, strings, and hash maps will provide a large amount of functionality necessary in programs when you need to store, access, and modify data. Here are some exercises you should now be equipped to solve.
+
++ Given a list of integers, use a vector and return the mean, median, and mode of the list.
++ Convert strings to pig latin. The first consonant of each word is moved to the end of the word and "ay" is added, so "first" becomes "irst-day". Words that start with a vowel have "hay" added to the end instead (e.g "apple" becomes "apple-hay"). Keep in mind the details about UTF-8 encoding.
++ Using a hash map and vectors, create a text interface to allow a user to add employee names to a department in a company. For example, "Add Sally to engineering" or "Add Amir to Sales". Then let the user retrieve a list of all people in a department or all people in the company by department, sorted alphabeticall.
+
+The standard library API documentation describes methods that vectors, strings, and hash maps have that will be helpful for these excercises.
+
+We are getting into more complex programs in which operations can fail, it is a perfect time to discuss error handling.
