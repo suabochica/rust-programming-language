@@ -9,6 +9,7 @@
 6. Enums and Pattern Matching
 7. Managing Growing Projects with Packages, Crates, and Modules.
 8. Common Collections
+9. Error Handling
 
 ## Links
 - [Rust Book](https://doc.rust-lang.org/book/)
