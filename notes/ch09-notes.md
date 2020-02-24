@@ -225,7 +225,82 @@ fn main() {
 Although this code has the same behavior in the nested match code, it does not contain any `match` expressions and is cleaner to read. Come back to this example after you have read chapter 13, and look up the `unwrap_or_else` method in the standard library documentation. Many more of these methods can clean up huge nested `match` expressions when you are dealing with errors.
 
 ### Shortcuts for Panic on Error
+Using `match` works well enough, but it can be a bit verbose and does not always communicate intent well. The `Result<T,E>` type has many helper methods defined on it to do various tasks. One of those methods, called unwrap, is a shortcut method that is implemented just like the `match` expression we wrote before. If the `Result` value is the `Ok` variant, `unwrap` will return the value inside the `Ok`. If the `Result` is the `Err` variant, unwrap will call the `panic!` macro for us. Here is an example of `unwrap` in action:
+
+```rust
+use std::fs::file;
+
+fn main() {
+    let f = file::open("hello.txt").unwrap();
+}
+```
+
+If we run this code without a `hello.txt` file, we will see an error message from the `panic!` call that the `unwrap` method makes:
+
+```
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Error {
+repr: Os { code: 2, message: "No such file or directory" } }',
+src/libcore/result.rs:906:4
+```
+
+Another method, `expect`, which is similar to `unwrap`, lets us also choose the `panic!` error message. Using `expect` instead of `unwrap` and providing good error messages can convey your intent and make tracking down the source of a panic easier. The syntax of `expect` looks like this:
+
+```rust
+use std::fs::file;
+
+fn main() {
+    let f = file::open("hello.txt").expect("Failed to open hello.txt");
+}
+```
+
+We use `expect` in the same way as `unwrap`, to return the file handle or call the `panic!` macro. The error message used by `expect` in its call to `panic!` will be the parameter that we pass to `expect`, rather than the default `panic!` message that `unwrap` uses.
+
+```
+thread 'main' panicked at 'Failed to open hello.txt: Error { repr: Os { code:
+2, message: "No such file or directory" } }', src/libcore/result.rs:906:4
+```
+
+Because this error message starts with the text we specified, `Failed to open hello.txt`, it will be easier to find where in the code this error message is coming from. If we use `unwrap` in multiple places, it can take more time to figure out exactly which `unwrap` is causing the panic because all `unwrap` call that panic print the same message.
+
 ### Propagating Errors
+When you are writing a function whose implementation calls something that might fall, instead of handling the error within this function, you can return the error to the calling code so that it can decide what to do. This is known as _propagating_ the error and gives more control to the calling code, where there might be more information or logic that dictates how the error should be handled than what you have available in the context of you code.
+
+For example, this snippet shows a function that reads a username from a file. If the file does not exist or cannot be read, this function will return those errors to the code that called this function.
+
+```rust
+use std::io;
+use std::io::READ;
+use std::fs::File;
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    let f = File::open("hello.txt");
+    
+    let mut f = match f {
+        Ok(file) => file,
+        Err(error) => return Err(error),
+    };
+    
+    let mut s = String::new();
+    
+    match f.read_to_string(&mut s) {
+        Ok(_) => Ok(s),
+        Err(error) => Err(error),
+    }
+}
+```
+
+This function could be written in a shorter way, but we are going to start by doing a lot of it manually in order to explore error handling. At the end we will show the shorter way.
+
+Let's look at the return type of the function first: `Result<String, io:Error>`. This means the function is returning a value of type `Result <T, E>` where the generic parameter `T` has been filled in with the concrete type `String` and the generic type `E` has been filled in with the concrete type `io::Error`. If this function succeeds without any problem, the code that calls this function will receive an `Ok` value that holds a String (the username that this function read from the file). If this function encounters any problems, the code that calls this function will receive and `Err` value  that holds ans instance of `io::Error` that contains more information about what the problems were. We chose `io::Error` as the return type of this function because that happens to be the type of the error value returned from both of the operations we are calling in this function's body that might fails. The `File::open` function and the `read_to_string` method.
+
+The body of the function starts by calling the `File::open` function. Then we handle the `Result` value returned with a `match`, passing the error value from `File::open` back to the calling code as this function's error values. If `File::open` succeeds, we store the file handle in the variable `f` and continue
+
+Then we create a new `String` in variable `s` and call the `read_to_string` method on the file handle in `f` to read the contents of the file into `s`. The `read_to_string` method also return a `Result` because it might fail, even though `File::open` succeeded. So, we need another `match` to handle the `Result`. If `read_to_string` succeeds, then our function has succeeded, and we return the username from the files that is now in `s` wrapped in an `Ok`. If `read_to_string` fails, we return the error value in the same way that we returned the error value in the `match` that handled the return value of `File::open`. However, we do not need to explicitly say `return`, because this is the last expression in the function.
+
+The code that calls this code will then handle getting either an `Ok` value that contains a username or an `Err`, value that contains an `io::Error`. We do not know what the calling code will do with those values. If the calling code gets and `Err` value, it could call `panic!` and crash the program, use a default username, or look up the username from somewhere other than a file, for example. We do not have enough information on what the calling code is actually trying to do, so we propagate all the success or error information upward for it to handle appropriately.
+
+This pattern of propagating error is so common in Rust that Rust provides the question mark operator `?` to make this easier.
+
 #### The `?` Operator
 #### `Result` returns
 
