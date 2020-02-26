@@ -302,6 +302,109 @@ The code that calls this code will then handle getting either an `Ok` value that
 This pattern of propagating error is so common in Rust that Rust provides the question mark operator `?` to make this easier.
 
 #### The `?` Operator
-#### `Result` returns
+Let's replace our last implementation of `read_username_file` using the `?` operator.
+
+```rust
+use std::io;
+use std::io::Read;
+use std::io::File;
+
+fn read_username_file() -> Result<String, io::Error> {
+    let mut f = File::open("hello.txt")?;
+    let mut s = String::new();
+    
+    f.read_to_string(&mut s)?;
+    Ok(s)
+}
+```
+The `?` placed after `Result` value is defined to work in almost the same way as the `match` expressions we defined to handle the `Result` values. If the value of the `Result` is an `Ok`, the value inside `Ok` will get returned from this expression, and the program will continue. If the values is `Err`, the `Err` will be returned from the whole function as if we had used the `return` keyword so the error values gets propagated to the calling code.
+
+There is a difference between what the `match` expression from the version without `?` and with `?`: error values that have the `?` operator called on them go through the `from` function, defined in the `From` trait in the standard library, which is used to convert error from one type into another. When the `?` operator calls the `from` function, the error type received is converted into the error type defined in the return type of the current function. This is useful when a function return one error type to represent all the ways a function might fail, even if parts might fail for many different reasons. As long as each error type implements the `from` function to define how to convert itself to the returned error type, the `?` operator takes care of the conversion automatically.
+
+In the context of the last snippet, the `?` at the end of the File::open call will return the value inside an `Ok`to the variable `f`. If an error occurs, the `?` operator will return early out of the whole function and give any `Err` value to the calling code. The same thing applies to the `?` at the end of the `read_to_string` call.
+
+The `?` operator eliminates a lot of boilerplate and makes this function's implementation simpler. We could even shorten this code further by chaining method calls immediately after the `?`, as shown below:
+
+```rust
+use std::io;
+use std::io::Read;
+use std::io::File;
+
+fn read_username_file() -> Result<String, io::Error> {
+    let mut s = String::new();
+    
+    File::open("hello.txt")?.read_to_string(&mut s)?;
+
+    Ok(s)
+}
+```
+
+We have moved the creation of the new `String` in `s` to the beginning of the function. That part has not changed. Instead of creating a variable `f` we have chained the call to `read_to_string` directly onto the result of `File::open("hello.txt")?`. We still have a `?` at the end of the `read_to_string` call, and we still return an `Ok` value containing the username in `s` when both `File::open` and `read_to_string` succeed rather than returning errors. The functionality is again the same as in old versions, with the difference that this version is more ergonomic way to write it.
+
+Speaking of different ways to write this function, we have an even shorter version shown below:
+
+```rust
+use std::io;
+use std::fs;
+
+fn read_username_from_file() -> Result<String, io::Error> {
+    fs::read_to_string("hello.txt")
+}
+```
+
+Reading a file into a string is fairly common operation, so Rust provides a convenient `fs::read_to_string` function that opens the file, creates a new `String`, reads the contents of the file, puts the contents into that `String`, and returns its. Of course, using `fs::read_to_string` does not give us the opportunity to explain all the error handling, so we did it the longer way first.
+
+#### The `?` Operator on `Result` returns
+The `?` operator can be used in functions that have a return type of `Result`, because it is defined to work in the same way as the `match` expressions we defined before. The part of the `match` that requires a return type of `Result`is `return Err(e)`, so the return type of the function can be `Result` to be compatible with this `return`.
+
+Let's look at what happens if we use the `?` operator in the `main` function, which you will recall has a return type of `()`:
+
+```rust
+use std::fs::File;
+
+fn main() {
+    let f = File::open("hello.txt")?;
+}
+```
+
+When we compile this code, we get the following error message:
+
+```
+error[E0277]: the `?` operator can only be used in a function that returns
+`Result` or `Option` (or another type that implements `std::ops::Try`)
+ --> src/main.rs:4:13
+   |
+   4 |     let f = File::open("hello.txt")?;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^ cannot use the `?` operator in a
+       function that returns `()`
+         |
+           = help: the trait `std::ops::Try` is not implemented for `()`
+           = note: required by `std::ops::Try::from_error`
+```
+This error points out that we are only allowed to use the `?` operator in a function that returns `Result`or `Option`or another type that implements `std::ops::Try`. When you are writing code in a function that does not return one of these types, an you want to use `?` when you call other function that return `Result<T, E>`, you have two choices to fix this problem. One technique is to change the return type of your function to be `Result<T,E>` if you have no restrictions preventing that. The other technique is to use a `match` or one of the `Result<T, E>` method to handle the `Result<T, E>`in whatever way is appropriate.
+
+The `main` function is special, and there are restrictions on what its return type must be. One valid return type for main is `()`, and conveniently, another valid return type is `Result<T, E>`, as shown here:
+
+```rust
+use std::error::Error;
+use std::fs::File;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let f = File::open("hellow.txt")?;
+    
+    Ok(())
+}
+```
+The `Box<dyn Error>` type is called a trait object, which we will talk about in the _Using Trait Objects that Allow for Values of Different Types_ section in chapter 17. For now, you can read `Box<dyn Error>` to mean "any kind of error". Using `?` in the `main` function with this return type is allowed.
+
+Now that we have discussed the details of calling `panic!` or returning `Result`, let's return to the topic of how to decide which is appropriate to use in which cases.
 
 ## 3. To panic! or Not to panic!
+
+### Examples, Prototype Code, and Tests
+
+### Cases in Which You Have More Information Than the Compiler
+### Guidelines for Error Handling
+### Creating Custom Type for Validation
+
+## Summary
