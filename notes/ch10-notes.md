@@ -423,4 +423,90 @@ fn main() {
 Because Rust compile generics code into code that specifies the type in each instance, we pay no runtime cost for using generics. When the code runs, it performs just as it would if we had duplicated each definition by hand. The process of monomorphization makes Rust's generics extremely efficient at runtime.
 
 ## Traits: Defining Shared Behavior
+A _trait_ tells the Rust compiler about functionality a particular type has and can share with other types. We can use traits to define shared behavior in an abstract way.. We can use trait bounds or specify that a generic can be any type that has certain behavior.
+
+> Note: Traits are similar to a feature often called _interfaces_ in other languages, although with some differences.
+
+### Defining a Trait
+A type's behavior consists of the methods we can call on that type. Different types share the same behavior if we can call the same methods on all of those types. Trait definitions are a way to group method signatures together to define a set of behaviors necessary to accomplish some purpose.
+
+For example, let's say we have multiple structs that hold various kinds and amount of text. A `NewsArticle` struct that holds a news story field in a particular location and a `Tweet` that can have a most 280 characters along with metadata that indicates whether it was a new tweet, a retweet, or reply to another tweet.
+
+We want to make a media aggregator library that can display summaries of data that might be stored in a `NewsArticle` or `Tweet` instance. To do this, we need a summary from each type, and we need to request that summary by calling a `summarize` method on an instance. Next code shows the definition of a `Summary` trait that expresses this behavior.
+
+```rust
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+```
+Here, we declare a trait using the `trait` keyword and then the trait's name, which is `Summary` in this case. Inside the curly brackets, we declare the method signature that describe the behaviors of the types that implement this trait, which in this case is `summarize(&self) -> String`.
+
+After the method signature, instead of providing an implementation within curly brackets, we use a semicolon. Each type implementing this trait must provide its own custom behavior for the body of the method. The compiler will enforce that any type that has the `Summary` trait will have the method `summarize` defined with this signature exactly.
+
+A trait can have multiple methods in its body. The method signatures are listed one per line a each ends in a semicolon.
+
+### Implementing a Trait on a Type
+Now that we have defined the desired behavior using the `Summary` trait, we can implement it on the types in our media aggregator. Next code shows an implementation of the `Summary` trait on the `NewsArticle` struct that uses the headline, the author, and the location to create the return value of `summarize`. For the `Tweet` struct, we define `summarize` as the username followed by the entire text of the tweet, assuming that tweet content is already limited to 280 characters.
+
+```rust
+pub struct NewsArticle {
+    pub headline: String;
+    pub location: String;
+    pub author: String;
+    pub content: String;
+}
+
+impl Summary for NewsArticle {
+    fn summarize(&self) -> String {
+        format("{}, by {} ({})", self.headline, self.author, self.location)
+    }
+}
+
+pub struct Tweet {
+    pub username: String,
+    pub content: String,
+    pub reply: bool,
+    pub retweet: bool,
+}
+
+impl Summary for Tweet {
+    fn summarize(&self) -> String {
+        format("{}: {})", self.username, self.content)
+    }
+}
+```
+Implementing a trait on a type is similar to implementing regular methods. The difference is that after `impl`, we put the trait name that we want to implement, then use the `for` keyword, and then specify the name of the type we want to implement the trait for. Within the `impl` block, we put the method signatures that the trait definition has defined. Instead of adding a semicolon after each signature, we use curly brackets and fill in the method body with the specific behavior that we want the methods of the trait to have for the particular type.
+
+After implementing the trait, we can call the method on instances of `NewsArticle` and `Tweet` in the same way we call regular methods.
+
+```rust
+let tweet = Tweet {
+    username: String::from("horse_ebooks"),
+    contemt: String::from("of course, as you probably already know, people"),
+    reply: false,
+    retweet: false,
+};
+
+println!("1 new tweet: {}", tweet.summarize());
+```
+
+This code prints `1 new tweet: horse_ebooks: of course , as you probably already know, people`.
+
+Note that because we defined the `Summary` trait an the `NewsArticle` and `Tweet` types in the same `lib.rs`, they are all in the same scope. Let's say this `lib.rs` is for a crate we have called `aggregator` and someone else wants to use our crate's functionality to implement the `Summary` trait on a struct defined within their library's scope. They would need to bring the trait into their scope first. They would do so by specifying `use aggregator::Summary;`, which then would enable them to implement `Summary` for their type. The `Summary` trait would also need to be a public trait for another crate to implement it, which it is because we put the `pub` keyword before `trait`.
+
+One restriction to note with trait implementation is that we can implement a trait on the type only if either the trait or the type is local to our crate. For example, we can implement standard library traits like `Display` on a custom type like `Tweet` as part of our `aggregator` crate functionality, because the type `Tweet` is local to our `aggregator` crate. We can also implement `Summary` on `Vec<T>` in our aggregator crate, because the trait `Summary` is local to our `aggregator` crate.
+
+But we cannot implement external traits on external types. For example, we cannot implement the `Display` trait on `Vec<T>` within our `aggregator` crate, because `Display` and `Vec<T>` are defined in the standard library and are not local to our `aggregator` crate. This restriction is part of a property of program called _coherence_, and more specifically the _orphan rule_, so named because the parent type is not present. This rules ensure that other people's code cannot break your code and vice versa. Without the rule, two crates could implement the same trait for the same type, and Rust would not know which implementation to use.
+
+### Default Implementations
+### Traits as Parameters
+#### Trait Bound Syntax
+#### Specifying Multiple Trait Bounds
+#### Clearer Trait Bounds
+
+### Returning Types that Implement Traits
+### Fixing the `largest` Function
+### Using Trait Bounds to Conditionally Implement Methods
+
+
 ## Validating References with Lifetimes
