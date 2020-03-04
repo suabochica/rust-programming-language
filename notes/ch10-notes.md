@@ -699,7 +699,123 @@ fn returns_summarizable(switch: bool) -> impl Summary {
 Returning either a `NewsArticle` or a `Tweet` isn’t allowed due to restrictions around how the `impl Trait` syntax is implemented in the compiler. We’ll cover how to write a function with this behavior in the “Using Trait Objects That Allow for Values of Different Types” section of Chapter 17.
 
 ### Fixing the `largest` Function
+Now that you know how to specify the behavior you want to use using the generic type parameter’s bounds, let’s return to Listing 10-5 to fix the definition of the largest function that uses a generic type parameter! Last time we tried to run that code, we received this error:
+
+```
+error[E0369]: binary operation `>` cannot be applied to type `T`
+ --> src/main.rs:5:12
+   ||
+   5 |         if item > largest {
+     | ^^^^^^^^^^^^^^ |        |
+     |                |        |
+     |                | #ERROR |
+     |                |        |
+     #+TBLFM: $2=note: an implementation of `std::cmp::PartialOrd` might be missing for `T`
+}||
+```
+
+In the body of largest we wanted to compare two values of type T using the greater than (>) operator. Because that operator is defined as a default method on the standard library trait std::cmp::PartialOrd, we need to specify PartialOrd in the trait bounds for T so the largest function can work on slices of any type that we can compare. We don’t need to bring PartialOrd into scope because it’s in the prelude. Change the signature of largest to look like this:
+
+```rust
+fn largest<T: PartialOrd>(list: &[T]) -> T {}
+```
+
+This time when we compile the code, we get a different set of errors:
+
+```
+error[E0508]: cannot move out of type `[T]`, a non-copy slice
+ --> src/main.rs:2:23
+   ||
+   2 |     let mut largest = list[0];
+   |
+```
+The key line in this error is `cannot move out of type [T], a non-copy slice`. With our non-generic versions of the largest function, we were only trying to find the largest `i32` or `char`. As discussed in the “Stack-Only Data: Copy” section in Chapter 4, types like `i32` and char that have a known size can be stored on the stack, so they implement the `Copy` trait. But when we made the `largest` function generic, it became possible for the `list` parameter to have types in it that don’t implement the `Copy` trait. Consequently, we wouldn’t be able to move the value out of list[0] and into the `largest` variable, resulting in this error.
+
+To call this code with only those types that implement the `Copy` trait, we can add `Copy` to the trait bounds of `T`! Next code shows the complete code of a generic `largest` function that will compile as long as the types of the values in the slice that we pass into the function implement the `PartialOrd` and `Copy` traits, like `i32` and `char` do.
+
+```rust
+fn largest<T: PartialOrd + Copy>(list: &[T]) -> T {
+    let mut largest = list[0];
+    
+    for &item in list.iter() {
+            if item > largest {
+              largest = item;
+            }
+    }
+    largest
+}
+
+fn main() {
+    let number_list = vec![34, 50, 25, 100, 65];
+    
+    let result = largest(&number_list);
+    println!("The largest number is {}", result);
+            
+    let char_list = vec!['y', 'm', 'a', 'q'];
+                
+    let result = largest(&char_list);
+    println!("The largest char is {}", result);
+}
+```
+If we don’t want to restrict the largest function to the types that implement the Copy trait, we could specify that T has the trait bound `Clone` instead of `Copy`. Then we could clone each value in the slice when we want the `largest` function to have ownership. Using the `clone` function means we’re potentially making more heap allocations in the case of types that own heap data like `String`, and heap allocations can be slow if we’re working with large amounts of data.
+
+Another way we could implement `largest` is for the function to return a reference to a `T` value in the slice. If we change the return type to &T instead of `T`, thereby changing the body of the function to return a reference, we wouldn’t need the `Clone` or `Copy` trait bounds and we could avoid heap allocations. Try implementing these alternate solutions on your own
+
 ### Using Trait Bounds to Conditionally Implement Methods
+By using a trait bound with an `impl` block that uses generic type parameters, we can implement methods conditionally for types that implement the specified traits. For example, the type Pair<T> in Listing 10-16 always implements the `new` function. But Pair<T> only implements the cmp_display method if its inner type `T` implements the `PartialOrd` trait that enables comparison and the `Display` trait that enables printing.
+
+```rust
+
+#![allow(unused_variables)]
+fn main() {
+    use std::fmt::Display;
+
+    struct Pair<T> {
+        x: T,
+        y: T,
+    }
+
+    impl<T> Pair<T> {
+        fn new(x: T, y: T) -> Self {
+            Self {
+                x,
+                y,
+            }
+        }
+    }
+
+    impl<T: Display + PartialOrd> Pair<T> {
+        fn cmp_display(&self) {
+            if self.x >= self.y {
+                println!("The largest member is x = {}", self.x);
+
+            } else {
+                println!("The largest member is y = {}", self.y);
+            }
+        }
+    }
+}
+```
+
+We can also conditionally implement a trait for any type that implements another trait. Implementations of a trait on any type that satisfies the trait bounds are called blanket _implementations_ and are extensively used in the Rust standard library. For example, the standard library implements the `ToString` trait on any type that implements the `Display` trait. The `impl` block in the standard library looks similar to this code:
+
+```rust
+impl<T: Display> ToString for T {}
+```
+Because the standard library has this blanket implementation, we can call the to_string method defined by the `ToString` trait on any type that implements the `Display` trait. For example, we can turn integers into their corresponding `String` values like this because integers implement `Display`:
+
+```rust
+let s = 3.to_string();
+```
+
+Blanket implementations appear in the documentation for the trait in the “Implementors” section.
+
+Traits and trait bounds let us write code that uses generic type parameters to reduce duplication but also specify to the compiler that we want the generic type to have particular behavior. The compiler can then use the trait bound information to check that all the concrete types used with our code provide the correct behavior. In dynamically typed languages, we would get an error at runtime if we called a method on a type which didn’t implement the type which defines the method. But Rust moves these errors to compile time so we’re forced to fix the problems before our code is even able to run. Additionally, we don’t have to write code that checks for behavior at runtime because we’ve already checked at compile time. Doing so improves performance without having to give up the flexibility of generics.
+
+Another kind of generic that we’ve already been using is called _lifetimes_. Rather than ensuring that a type has the behavior we want, lifetimes ensure that references are valid as long as we need them to be. Let’s look at how lifetimes do that.
+
+
+
 
 
 ## Validating References with Lifetimes
