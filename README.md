@@ -10,6 +10,8 @@
 7. Managing Growing Projects with Packages, Crates, and Modules.
 8. Common Collections
 9. Error Handling
+9. Generic Types, Traits and Lifetimes
+10. Writing Automated Tests
 
 ## Links
 - [Rust Book](https://doc.rust-lang.org/book/)

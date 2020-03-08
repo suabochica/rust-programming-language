@@ -7,5 +7,6 @@ loops/target/*
 rectangles/target/*
 enums/target/*
 restaurant/target/*
+adder/target/*
 
 **/.DS_Store
