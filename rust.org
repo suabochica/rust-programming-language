@@ -1,5 +1,8 @@
 * Chapter 11: Writing Automated Test 
   DEADLINE: <2020-03-09 Mon>
-** TODO How to Write Test 
-** Controlling How Test are Run
-** Test Organization
+** DONE How to Write Test 
+   CLOSED: [2020-03-10 Tue 07:53]
+** DONE Controlling How Test are Run
+   CLOSED: [2020-03-12 Thu 07:57]
+** DONE Test Organization
+   CLOSED: [2020-03-14 Sat 09:26]

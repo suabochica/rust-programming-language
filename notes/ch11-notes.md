@@ -442,4 +442,405 @@ You can’t use the `#[should_panic]` annotation on tests that use `Result<T, E>
 Now that you know several ways to write tests, let’s look at what is happening when we run our tests and explore the different options we can use with `cargo test`.
 
 ## Controlling How Test Are Run
+Just as `cargo run` compiles your code and then runs the resulting binary, `cargo test` compiles your code in test mode and runs the resulting test binary. You can specify command line options to change the default behavior of `cargo test`. For example, the default behavior of the binary produced by `cargo test` is to run all the tests in parallel and capture output generated during test runs, preventing the output from being displayed and making it easier to read the output related to the test results.
+
+Some command line options go to `cargo test`, and some go to the resulting test binary. To separate these two types of arguments, you list the arguments that go to `cargo test` followed by the separator `--` and then the ones that go to the test binary. Running `cargo test --help` displays the options you can use with cargo test, and running `cargo test -- --help` displays the options you can use after the separator `--`.
+
+### Running Test in Parallel
+When you run multiple tests, by default they run in parallel using threads. This means the tests will finish running faster so you can get feedback quicker on whether or not your code is working. Because the tests are running at the same time, make sure your tests don’t depend on each other or on any shared state, including a shared environment, such as the current working directory or environment variables.
+
+For example, say each of your tests runs some code that creates a file on disk named _test-output.txt_ and writes some data to that file. Then each test reads the data in that file and asserts that the file contains a particular value, which is different in each test. Because the tests run at the same time, one test might overwrite the file between when another test writes and reads the file. The second test will then fail, not because the code is incorrect but because the tests have interfered with each other while running in parallel. One solution is to make sure each test writes to a different file; another solution is to run the tests one at a time.
+
+If you don’t want to run the tests in parallel or if you want more fine-grained control over the number of threads used, you can send the `--test-threads` flag and the number of threads you want to use to the test binary. Take a look at the following example:
+
+```
+$ cargo test -- --test-threads=1
+```
+
+We set the number of test threads to 1, telling the program not to use any parallelism. Running the tests using one thread will take longer than running them in parallel, but the tests won’t interfere with each other if they share state.
+
+### Showing Function Output
+By default, if a test passes, Rust’s test library captures anything printed to standard output. For example, if we call `println!` in a test and the test passes, we won’t see the `println!` output in the terminal; we’ll see only the line that indicates the test passed. If a test fails, we’ll see whatever was printed to standard output with the rest of the failure message.
+
+As an example below, we has a silly function that prints the value of its parameter and returns 10, as well as a test that passes and a test that fails.
+
+```rust
+This code panics!
+fn prints_and_returns_10(a: i32) -> i32 {
+    println!("I got the value {}", a);
+    10
+        
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+      fn this_test_will_pass() {
+            let value = prints_and_returns_10(4);
+            assert_eq!(10, value);
+      }
+
+      #[test]
+      fn this_test_will_fail() {
+            let value = prints_and_returns_10(8);
+            assert_eq!(5, value);
+      }
+}
+
+```
+                    
+When we run these tests with cargo test, we’ll see the following output:
+
+```
+running 2 tests
+test tests::this_test_will_pass ... ok
+test tests::this_test_will_fail ... FAILED
+
+failures:
+
+---- tests::this_test_will_fail stdout ----
+I got the value 8
+thread 'tests::this_test_will_fail' panicked at 'assertion failed: `(left == right)`
+    left: `5`,
+    right: `10`', src/lib.rs:19:9
+    note: Run with `RUST_BACKTRACE=1` for a backtrace.
+
+    failures:
+        tests::this_test_will_fail
+
+        test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
+```
+                    
+                    
+Note that nowhere in this output do we see I got the value 4, which is what is printed when the test that passes runs. That output has been captured. The output from the test that failed, I got the value 8, appears in the section of the test summary output, which also shows the cause of the test failure.
+                           
+If we want to see printed values for passing tests as well, we can disable the output capture behavior by using the `--nocapture` flag:
+
+```
+$ cargo test -- --nocapture
+```                           
+When we run the tests in last code again with the `--nocapture` flag, we see the following output:
+
+```
+running 2 tests
+I got the value 4
+I got the value 8
+test tests::this_test_will_pass ... ok
+thread 'tests::this_test_will_fail' panicked at 'assertion failed: `(left == right)`
+  left: `5`,
+  right: `10`', src/lib.rs:19:9
+  note: Run with `RUST_BACKTRACE=1` for a backtrace.
+  test tests::this_test_will_fail ... FAILED
+
+  failures:
+
+  failures:
+      tests::this_test_will_fail
+
+      test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+Note that the output for the tests and the test results are interleaved; the reason is that the tests are running in parallel, as we talked about in the previous section. Try using the `--test-threads=1` option and the `--nocapture` flag, and see what the output looks like then!
+
+### Running a Subset of Tests by Name
+Sometimes, running a full test suite can take a long time. If you’re working on code in a particular area, you might want to run only the tests pertaining to that code. You can choose which tests to run by passing `cargo test` the name or names of the test(s) you want to run as an argument.
+
+To demonstrate how to run a subset of tests, we’ll create three tests for our add_two function, as shown in next snippet, and choose which ones to run.
+
+```rust
+pub fn add_two(a: i32) -> i32 {
+    a + 2
+    
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn add_two_and_two() {
+        assert_eq!(4, add_two(2));
+    }
+
+    #[test]
+    fn add_three_and_two() {
+        assert_eq!(5, add_two(3));
+    }
+
+    #[test]
+    fn one_hundred() {
+        assert_eq!(102, add_two(100));
+    }
+}
+```
+
+If we run the tests without passing any arguments, as we saw earlier, all the tests will run in parallel:
+
+```
+running 3 tests
+test tests::add_two_and_two ... ok
+test tests::add_three_and_two ... ok
+test tests::one_hundred ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+#### Running Single Tests
+We can pass the name of any test function to cargo test to run only that test:
+
+```
+$ cargo test one_hundred
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+         Running target/debug/deps/adder-06a75b4a1f2515e9
+         
+running 1 test
+test tests::one_hundred ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out
+```
+Only the test with the name `one_hundred` ran; the other two tests didn’t match that name. The test output lets us know we had more tests than what this command ran by displaying `2 filtered out` at the end of the summary line.
+
+We can’t specify the names of multiple tests in this way; only the first value given to `cargo test` will be used. But there is a way to run multiple tests.
+#### Filtering to Run Multiple Tests
+We can specify part of a test name, and any test whose name matches that value will be run. For example, because two of our tests’ names contain `add`, we can run those two by running `cargo test add`:
+
+```
+$ cargo test add
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+         Running target/debug/deps/adder-06a75b4a1f2515e9
+         
+running 2 tests
+test tests::add_two_and_two ... ok
+test tests::add_three_and_two ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
+```
+This command ran all tests with `add` in the name and filtered out the test named `one_hundred`. Also note that the module in which a test appears becomes part of the test’s name, so we can run all the tests in a module by filtering on the module’s name.
+
+### Ignoring Some Tests Unless Specifically Requested
+Sometimes a few specific tests can be very time-consuming to execute, so you might want to exclude them during most runs of `cargo test`. Rather than listing as arguments all tests you do want to run, you can instead annotate the time-consuming tests using the `ignore` attribute to exclude them, as shown here:
+
+```rust
+#[test]
+fn it_works() {
+    assert_eq!(2 + 2, 4);
+    
+}
+
+#[test]
+#[ignore]
+fn expensive_test() {
+    // code that takes an hour to run
+    
+}
+```
+After `#[test]` we add the `#[ignore]` line to the test we want to exclude. Now when we run our tests, `it_works` runs, but `expensive_test` doesn’t:
+
+```
+$ cargo test
+   Compiling adder v0.1.0 (file:///projects/adder)
+       Finished dev [unoptimized + debuginfo] target(s) in 0.24 secs
+            Running target/debug/deps/adder-ce99bcc2479f4607
+            
+running 2 tests
+test expensive_test ... ignored
+test it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out
+```
+
+The expensive_test function is listed as ignored. If we want to run only the ignored tests, we can use `cargo test -- --ignored`:
+
+```
+$ cargo test -- --ignored
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+         Running target/debug/deps/adder-ce99bcc2479f4607
+         
+running 1 test
+test expensive_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
+```
+
+By controlling which tests run, you can make sure your cargo test results will be fast. When you’re at a point where it makes sense to check the results of the ignored tests and you have time to wait for the results, you can run `cargo test -- --ignored` instead.
+
 ## Test Organization
+
+As mentioned at the start of the chapter, testing is a complex discipline, and different people use different terminology and organization. The Rust community thinks about tests in terms of two main categories:
+
++ Unit Tests
++ Integration Tests
+
+Unit tests are small and more focused, testing one module in isolation at a time, and can test private interfaces.
+
+Integration tests are entirely external to your library and use your code in the same way any other external code would, using only the public interface and potentially exercising multiple modules per test.
+
+Writing both kinds of tests is important to ensure that the pieces of your library are doing what you expect them to, separately and together.
+
+### Unit Tests
+The purpose of unit tests is to test each unit of code in isolation from the rest of the code to quickly pinpoint where code is and isn’t working as expected. You’ll put unit tests in the src directory in each file with the code that they’re testing. The convention is to create a module named tests in each file to contain the test functions and to annotate the module with cfg(test).
+
+
+#### The Test Module
+The `#[cfg(test)]` annotation on the tests module tells Rust to compile and run the test code only when you run `cargo test`, not when you run `cargo build`. This saves compile time when you only want to build the library and saves space in the resulting compiled artifact because the tests are not included. You’ll see that because integration tests go in a different directory, they don’t need the `#[cfg(test)]` annotation. However, because unit tests go in the same files as the code, you’ll use `#[cfg(test)]` to specify that they shouldn’t be included in the compiled result.
+
+Recall that when we generated the new adder project in the first section of this chapter, Cargo generated this code for us:
+
+```rust
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+            assert_eq!(2 + 2, 4);
+
+    }
+}
+```
+
+This code is the automatically generated test module. The attribute `cfg` stands for configuration and tells Rust that the following item should only be included given a certain configuration option. In this case, the configuration option is `test`, which is provided by Rust for compiling and running tests. By using the `cfg` attribute, Cargo compiles our test code only if we actively run the tests with `cargo test`. This includes any helper functions that might be within this module, in addition to the functions annotated with `#[test]`.
+
+#### Testing Private Functions
+There’s debate within the testing community about whether or not private functions should be tested directly, and other languages make it difficult or impossible to test private functions. Regardless of which testing ideology you adhere to, Rust’s privacy rules do allow you to test private functions. Consider the next code with the private function `internal_adder`.
+
+```rust
+fn main() {}
+
+pub fn add_two(a: i32) -> i32 {
+    internal_adder(a, 2)
+}
+
+fn internal_adder(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn internal() {
+        assert_eq!(4, internal_adder(2, 2));
+    }
+}
+```
+
+Note that the `internal_adder` function is not marked as `pub`, but because tests are just Rust code and the tests module is just another module, you can bring `internal_adder` into a test’s scope and call it. If you don’t think private functions should be tested, there’s nothing in Rust that will compel you to do so.
+
+### Integration Tests
+In Rust, integration tests are entirely external to your library. They use your library in the same way any other code would, which means they can only call functions that are part of your library’s public API. Their purpose is to test whether many parts of your library work together correctly. Units of code that work correctly on their own could have problems when integrated, so test coverage of the integrated code is important as well. To create integration tests, you first need a _tests_ directory.
+
+#### The _tests_ Directory
+We create a _tests_ directory at the top level of our project directory, next to _src_. Cargo knows to look for integration test files in this directory. We can then make as many test files as we want to in this directory, and Cargo will compile each of the files as an individual crate.
+
+Let’s create an integration test in _tests/integration_test.rs_:
+
+```rust
+use adder;
+
+#[test]
+fn it_adds_two() {
+    assert_eq!(4, adder::add_two(2));
+}
+```
+
+We’ve added `use adder` at the top of the code, which we didn’t need in the unit tests. The reason is that each file in the tests directory is a separate crate, so we need to bring our library into each test crate’s scope.
+
+We don’t need to annotate any code in _tests/integration_test.rs_ with `#[cfg(test)]`. Cargo treats the tests directory specially and compiles files in this directory only when we run cargo test. Run `cargo test` now:
+
+```
+$ cargo test
+   Compiling adder v0.1.0 (file:///projects/adder)
+       Finished dev [unoptimized + debuginfo] target(s) in 0.31 secs
+            Running target/debug/deps/adder-abcabcabc
+            
+running 1 test
+test tests::internal ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+      Running target/debug/deps/integration_test-ce99bcc2479f4607
+
+running 1 test
+test it_adds_two ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+        Doc-tests adder
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+The three sections of output include the unit tests, the integration test, and the doc tests.
+
+The first section for the unit tests is the same as we’ve been seeing: one line for each unit test and then a summary line for the unit tests.
+
+The integration tests section starts with the line `Running target/debug/deps/integration_test-ce99bcc2479f4607` (the hash at the end of your output will be different). Next, there is a line for each test function in that integration test and a summary line for the results of the integration test just before the `Doc-tests adder` section starts.
+
+Similarly to how adding more unit test functions adds more result lines to the unit tests section, adding more test functions to the integration test file adds more result lines to this integration test file’s section. Each integration test file has its own section, so if we add more files in the tests directory, there will be more integration test sections.
+
+We can still run a particular integration test function by specifying the test function’s name as an argument to `cargo test`. To run all the tests in a particular integration test file, use the `--test` argument of `cargo test` followed by the name of the file:
+
+```
+$ cargo test --test integration_test
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+         Running target/debug/integration_test-952a27e0126bb565
+         
+running 1 test
+test it_adds_two ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+This command runs only the tests in the _tests/integration_test.rs_ file.
+
+#### Sumbodules in Integration Tests
+As you add more integration tests, you might want to make more than one file in the tests directory to help organize them; for example, you can group the test functions by the functionality they’re testing. As mentioned earlier, each file in the tests directory is compiled as its own separate crate.
+
+Treating each integration test file as its own crate is useful to create separate scopes that are more like the way end users will be using your crate. However, this means files in the tests directory don’t share the same behavior as files in _src_ do, as you learned in Chapter 7 regarding how to separate code into modules and files.
+
+The different behavior of files in the tests directory is most noticeable when you have a set of helper functions that would be useful in multiple integration test files into a common module with a particular convention.
+
+To avoid having common appear in the test output, instead of creating _tests/common.rs_, we’ll create _tests/common/mod.rs_. This is an alternate naming convention that Rust also understands. Naming the file this way tells Rust not to treat the common module as an integration test file. When we move the setup function code into _tests/common/mod.rs_ and delete the _tests/common.rs_ file, the section in the test output will no longer appear. Files in subdirectories of the tests directory don’t get compiled as separate crates or have sections in the test output.
+
+```rust
+// tests/common/mod.rs
+
+#![allow(unused_variables)]
+fn main() {
+  pub fn setup() {
+      // setup code specific to your library's tests would go here
+
+  }
+}
+```
+
+After we’ve created _tests/common/mod.rs_, we can use it from any of the integration test files as a module. Here’s an example of calling the setup function from the it_adds_two test in tests/integration_test.rs:
+
+```rust
+// tests/integration_test.rs
+
+use adder;
+
+mod common;
+
+#[test]
+fn it_adds_two() {
+    common::setup();
+    assert_eq!(4, adder::add_two(2));
+}
+```
+
+Note that the mod common; declaration is the same as the module declaration we demonstrated in Chapter 7. Then in the test function, we can call the _common::setup()_ function.
+
+#### Integration Tests for Binary Crates
+If our project is a binary crate that only contains a _src/main.rs_ file and doesn’t have a _src/lib.rs_ file, we can’t create integration tests in the tests directory and bring functions defined in the _src/main.rs_ file into scope with a `use` statement. Only library crates expose functions that other crates can use; binary crates are meant to be run on their own.
+
+This is one of the reasons Rust projects that provide a binary have a straightforward _src/main.rs_ file that calls logic that lives in the _src/lib.rs_ file. Using that structure, integration tests can test the library crate with use to make the important functionality available. If the important functionality works, the small amount of code in the _src/main.rs_ file will work as well, and that small amount of code doesn’t need to be tested.
+
+### Summary
+Rust’s testing features provide a way to specify how code should function to ensure it continues to work as you expect, even as you make changes. Unit tests exercise different parts of a library separately and can test private implementation details. Integration tests check that many parts of the library work together correctly, and they use the library’s public API to test the code in the same way external code will use it. Even though Rust’s type system and ownership rules help prevent some kinds of bugs, tests are still important to reduce logic bugs having to do with how your code is expected to behave.
+
+Let’s combine the knowledge you learned in this chapter and in previous chapters to work on a project!
