@@ -10,8 +10,9 @@
 7. Managing Growing Projects with Packages, Crates, and Modules.
 8. Common Collections
 9. Error Handling
-9. Generic Types, Traits and Lifetimes
-10. Writing Automated Tests
+10. Generic Types, Traits and Lifetimes
+11. Writing Automated Tests
+12. An I/O Project: Building a Command Line Program
 
 ## Links
 - [Rust Book](https://doc.rust-lang.org/book/)

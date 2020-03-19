@@ -8,5 +8,6 @@ rectangles/target/*
 enums/target/*
 restaurant/target/*
 adder/target/*
+minigrep/target/*
 
 **/.DS_Store
