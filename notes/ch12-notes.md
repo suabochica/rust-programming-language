@@ -104,7 +104,7 @@ We temporarily print the values of these variables to prove that the code is wor
 $ cargo run test sample.txt
    Compiling minigrep v0.1.0 (file:///projects/minigrep)
        Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
-            Running `target/debug/minigrep test sample.txt`
+            Rndling Errors Returned from run in mainunning `target/debug/minigrep test sample.txt`
 Searching for test
 In file sample.txt
 ```
@@ -172,6 +172,51 @@ To an admiring bog!
 Great! The code read and then printed the contents of the file. But the code has a few flaws. The `main` function has multiple responsibilities: generally, functions are clearer and easier to maintain if each function is responsible for only one idea. The other problem is that we’re not handling errors as well as we could. The program is still small, so these flaws aren’t a big problem, but as the program grows, it will be harder to fix them cleanly. It’s good practice to begin refactoring early on when developing a program, because it’s much easier to refactor smaller amounts of code. We’ll do that next.
 
 ## 3. Refactoring to Improve Modularity and Error Handling
+To improve our program, we will fix four problems that have to do with the program's structure and how it is handling potential errors.
+
+First, our `main` function now performs two tasks: it parses arguments and reads files. For such a small function, this isn’t a major problem. However, if we continue to grow our program inside `main`, the number of separate tasks the main function handles will increase. As a function gains responsibilities, it becomes more difficult to reason about, harder to test, and harder to change without breaking one of its parts. It’s best to separate functionality so each function is responsible for one task.
+
+This issue also ties into the second problem: although query and filename are configuration variables to our program, variables like contents are used to perform the program’s logic. The longer main becomes, the more variables we’ll need to bring into scope; the more variables we have in scope, the harder it will be to keep track of the purpose of each. It’s best to group the configuration variables into one structure to make their purpose clear.
+
+The third problem is that we’ve used expect to print an error message when reading the file fails, but the error message just prints `Something went wrong reading the file`. Reading a file can fail in a number of ways: for example, the file could be missing, or we might not have permission to open it. Right now, regardless of the situation, we’d print the `Something went wrong reading the file` error message, which wouldn’t give the user any information!
+
+Fourth, we use `expect` repeatedly to handle different errors, and if the user runs our program without specifying enough arguments, they’ll get an index out of bounds error from Rust that doesn’t clearly explain the problem. It would be best if all the error-handling code were in one place so future maintainers had only one place to consult in the code if the error-handling logic needed to change. Having all the error-handling code in one place will also ensure that we’re printing messages that will be meaningful to our end users.
+
+Let's address these four problems by refactoring our projects
+
+### Separation of Concerns for Binary Projects
+The organizational problem of allocating responsibility for multiple tasks to the `main` function is common to many binary projects. As a result, the Rust community has developed a process to use as a guideline for splitting the separate concerns of a binary program when `main` starts getting large. The process has the following steps:
+
+1. Split your program into a `main.rs` and a `lib.rs` and move your program's logic to `lib.rs`
+2. As long as your command line parsing logic is small, it can remain in `main.rs`
+3. When the command line parsing logic starts getting complicated, extract it form `main.rs` and move it to `lib.rs`
+
+The responsibilities that remain in the `main` function after this process should be limited to the following:
+
+- Calling the command line parsing logic with the argument values
+- Setting up any other configuration
+- Calling a run function in lib.rs
+- Handling the error if run returns an error
+
+This pattern is about _separating concerns_: `main.rs` handles running the program, and lib.rs handles all the logic of the task at hand. Because you can’t test the `main` function directly, this structure lets you test all of your program’s logic by moving it into functions in `lib.rs`. The only code that remains in main.rs will be small enough to verify its correctness by reading it. Let’s rework our program by following this process.
+
+#### Extracting the Argument Parser
+#### Grouping Configuration Values
+#### Creating a Constructor for Config
+
+### Fixing the Error Handling
+
+#### Improving the Error Message
+#### Returning a Result from new
+#### Calling Config::new and Handling Errors
+
+### Extracting Logic from main
+
+#### Returning Errors from the run Function
+#### Handling Errors Returned from run in main
+
+### Splitting Code into a Library Crate
+ 
 ## 4. Developing the Library's Functionality with Test Drive Development
 ## 5. Working with environment variables
 ## 6. Writing Error Messages

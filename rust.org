@@ -10,9 +10,10 @@
   DEADLINE: <2020-03-09 Mon>
 ** DONE Accepting Command Line Arguments
    CLOSED: [2020-03-19 Thu 08:25]
-** TODO Reading a File
-** Refactoring to Improve Modularity and Error Handling
-** Developing the Library's Functionality with Test Drive Development
-** Working with environment variables
-** Writing Error Messages
+** DONE Reading a File
+   CLOSED: [2020-03-21 Sat 13:57]
+** TODO Refactoring to Improve Modularity and Error Handling
+** TODO Developing the Library's Functionality with Test Drive Development
+** TODO Working with environment variables
+** TODO Writing Error Messages
 
