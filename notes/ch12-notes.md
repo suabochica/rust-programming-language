@@ -201,8 +201,117 @@ The responsibilities that remain in the `main` function after this process shoul
 This pattern is about _separating concerns_: `main.rs` handles running the program, and lib.rs handles all the logic of the task at hand. Because you can’t test the `main` function directly, this structure lets you test all of your program’s logic by moving it into functions in `lib.rs`. The only code that remains in main.rs will be small enough to verify its correctness by reading it. Let’s rework our program by following this process.
 
 #### Extracting the Argument Parser
+We’ll extract the functionality for parsing arguments into a function that `main` will call to prepare for moving the command line parsing logic to `src/lib.rs`. Next snippet shows the new start of `main` that calls a new function `parse_config,` which we’ll define in `src/main.r`s for the moment.
+
+```rs
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let (query, filename) = parse_config(&args);
+
+    println!("Searching for {}", query);
+    println!("In file {}", filename);
+
+    let contents = fs::read_to_string(filename)
+        .expect("Something went wrong reading the file");
+
+    println!("With text:\n{}", contents)
+}
+
+fn parse_config(args: &[String]) -> (&str, &str) -> {
+    let query = &args[1];
+    let filename = &args[2];
+
+    (query, filename)
+}
+```
+We’re still collecting the command line arguments into a vector, but instead of assigning the argument value at index 1 to the variable `query` and the argument value at index 2 to the variable `filename` within the `main` function, we pass the whole vector to the `parse_config` function. The `parse_config` function then holds the logic that determines which argument goes in which variable and passes the values back to `main`. We still create the `query` and `filename` variables in `main`, but `main` no longer has the responsibility of determining how the command line arguments and variables correspond.
+
+This rework may seem like overkill for our small program, but we’re refactoring in small, incremental steps. After making this change, run the program again to verify that the argument parsing still works. It’s good to check your progress often, to help identify the cause of problems when they occur.
+
 #### Grouping Configuration Values
+We can take another small step to improve the `parse_config` function further. At the moment, we’re returning a tuple, but then we immediately break that tuple into individual parts again. This is a sign that perhaps we don’t have the right abstraction yet.
+
+Another indicator that shows there’s room for improvement is the `config` part of `parse_config`, which implies that the two values we return are related and are both part of one configuration value. We’re not currently conveying this meaning in the structure of the data other than by grouping the two values into a tuple; we could put the two values into one struct and give each of the struct fields a meaningful name. Doing so will make it easier for future maintainers of this code to understand how the different values relate to each other and what their purpose is.
+
+> Note: Using primitive when a complex type would be more appropriate is an anti-pattern knows as _primitive obsession_.
+
+Next code shows the improvements to the `parse_config` function:
+
+```rs
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = parse_config(&args);
+
+    println!("Searching for {}", config.query);
+    println!("In file {}", config.filename);
+
+    let contents = fs::read_to_string(config.filename)
+        .expect("Something went wrong reading the file");
+
+    println!("With text:\n{}", contents)
+}
+
+struct Config {
+    query: String,
+    filename: String,
+}
+
+fn parse_config(args: &[String]) -> Config -> {
+    let query = &args[1].clone;
+    let filename = &args[2].clone;
+
+   Config { query, filename }
+}
+```
+
+We’ve added a struct named `Config` defined to have fields named `query` and `filename`. The signature of `parse_config` now indicates that it returns a `Config` value. In the body of `parse_config`, where we used to return string slices that reference `String` values in `args`, we now define `Config` to contain owned `String` values. The `args` variable in `main` is the owner of the argument values and is only letting the `parse_config` function borrow them, which means we’d violate Rust’s borrowing rules if `Config` tried to take ownership of the values in `args`.
+
+We could manage the `String` data in a number of different ways, but the easiest, though somewhat inefficient, route is to call the clone method on the values. This will make a full copy of the data for the `Config` instance to own, which takes more time and memory than storing a reference to the string data. However, cloning the data also makes our code very straightforward because we don’t have to manage the lifetimes of the references; in this circumstance, giving up a little performance to gain simplicity is a worthwhile trade-off.
+
+> ### The Trade-Offs of Using `clone`
+> There is a tendency among many Rustaceans to avoid using `clone` to fix ownership problems because of its runtime cost. For now, it is okay to copy few string to continue making progress because you will make these copies only once and your filename and query string are very small. It is better to have a working program that is bit inefficient that to try to hyperoptimize code on your first pass. As you become more experienced with Rust, it will be easier to start with the most efficient solution, but for now, it is perfectly acceptable to call `clone`.
+
+We’ve updated `main` so it places the instance of `Config` returned by `parse_config` into a variable named `config`, and we updated the code that previously used the separate `query` and `filename` variables so it now uses the fields on the `Config` struct instead.
+
+Now our code more clearly conveys that `query` and `filename` are related and that their purpose is to configure how the program will work. Any code that uses these values knows to find them in the `config` instance in the fields named for their purpose.
+
 #### Creating a Constructor for Config
+So far, we’ve extracted the logic responsible for parsing the command line arguments from `main` and placed it in the `parse_config` function. Doing so helped us to see that the `query` and `filename` values were related and that relationship should be conveyed in our code. We then added a `Config` struct to name the related purpose of `query` and `filename` and to be able to return the values’ names as struct field names from the `parse_config` function.
+
+So now that the purpose of the parse_config function is to create a `Config` instance, we can change `parse_config` from a plain function to a function named new that is associated with the `Config` struct. Making this change will make the code **more idiomatic**. We can create instances of types in the standard library, such as `String`, by calling `String::new`. Similarly, by changing `parse_config` into a new function associated with `Config`, we’ll be able to create instances of `Config` by calling `Config::new`. 
+
+```rs
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = Config::new(&args);
+
+    println!("Searching for {}", config.query);
+    println!("In file {}", config.filename);
+
+    let contents = fs::read_to_string(config.filename)
+        .expect("Something went wrong reading the file");
+
+    println!("With text:\n{}", contents)
+}
+
+struct Config {
+    query: String,
+    filename: String,
+}
+
+impl Config {
+    fn new(args: &[String]) -> Config -> {
+        let query = &args[1].clone;
+        let filename = &args[2].clone;
+
+        Config { query, filename }
+    }
+}
+```
+We’ve updated main where we were calling `parse_config` to instead call `Config::new`. We’ve changed the name of `parse_config` to new and moved it within an `impl`  block, which associates the new function with `Config`. Try compiling this code again to make sure it works.
 
 ### Fixing the Error Handling
 
