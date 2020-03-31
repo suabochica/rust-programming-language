@@ -314,10 +314,106 @@ impl Config {
 We’ve updated main where we were calling `parse_config` to instead call `Config::new`. We’ve changed the name of `parse_config` to new and moved it within an `impl`  block, which associates the new function with `Config`. Try compiling this code again to make sure it works.
 
 ### Fixing the Error Handling
+Now we’ll work on fixing our error handling. Recall that attempting to access the values in the `args` vector at index 1 or index 2 will cause the program to panic if the vector contains fewer than three items. Try running the program without any arguments; it will look like this:
+
+```
+$ cargo run
+   Compiling minigrep v0.1.0 (file:///projects/minigrep)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+     Running `target/debug/minigrep`
+thread 'main' panicked at 'index out of bounds: the len is 1
+but the index is 1', src/main.rs:25:21
+note: Run with `RUST_BACKTRACE=1` for a backtrace.
+```
+
+The line `index out of bounds: the len is 1 but the index is 1`` is an error message intended for programmers. It won’t help our end users understand what happened and what they should do instead. Let’s fix that now.
 
 #### Improving the Error Message
+Before, we add a check in the new function that will verify that the slice is long enough before accessing index 1 and 2. If the slice isn’t long enough, the program panics and displays a better error message than the `index out of bounds`` message.
+
+```rs
+// --snip--
+fn new(args: &[String]) -> Config {
+    if args.len() < 3 {
+        panic!("not enough arguments");
+    }
+    // --snip--
+
+```
+
+Here, we called `panic` when the value argument was out of the range of valid values. Instead of checking for a range of values here, we’re checking that the length of `args` is at least 3 and the rest of the function can operate under the assumption that this condition has been met. If `args` has fewer than three items, this condition will be true, and we call the `panic!` macro to end the program immediately.
+
+With these extra few lines of code in new, let’s run the program without any arguments again to see what the error looks like now:
+
+```
+$ cargo run
+   Compiling minigrep v0.1.0 (file:///projects/minigrep)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+     Running `target/debug/minigrep`
+thread 'main' panicked at 'not enough arguments', src/main.rs:26:13
+note: Run with `RUST_BACKTRACE=1` for a backtrace.
+```
+
+This output is better: we now have a reasonable error message. However, we also have extraneous information we don’t want to give to our users. Remember that a call to `panic!` is more appropriate for a programming problem than a usage problem. Instead, we can returning `Result` that indicates either success or error.
+
 #### Returning a Result from new
+
+We can instead return a `Result` value that will contain a `Config` instance in the successful case and will describe the problem in the error case. When `Config::new` is communicating to main, we can use the `Result` type to signal there was a problem. Then we can change main to convert an `Err` variant into a more practical error for our users without the surrounding text about `thread 'main'` and `RUST_BACKTRACE` that a call to `panic!` causes.
+
+
+Below we shows the changes we need to make to the return value of `Config::new` and the body of the function needed to return a `Result`. Note that this won’t compile until we update `main` as well, which we’ll do in the next listing.
+
+```
+impl Config {
+    fn new(args: &[String]) -> Result<Config, &'static str> {
+        if args.len() < 3 {
+            return Err("not enough arguments");
+        }
+
+        let query = args[1].clone();
+        let filename = args[2].clone();
+
+        Ok(Config { query, filename })
+    }
+}
+```
+
+Our new function now returns a `Result` with a `Config` instance in the success case and a `&'static str` in the error case. Recall that `&'static str` is the type of string literals, which is our error message type for now.
+
+We’ve made two changes in the body of the new function: instead of calling `panic!` when the user doesn’t pass enough arguments, we now return an `Err` value, and we’ve wrapped the `Config` return value in an `Ok`. These changes make the function conform to its new type signature.
+
+Returning an `Err` value from `Config::new` allows the `main` function to handle the `Result` value returned from the new function and exit the process more cleanly in the error case.
+
 #### Calling Config::new and Handling Errors
+To handle the error case and print a user-friendly message, we need to update main to handle the `Result` being returned by `Config::new`. We’ll also take the responsibility of exiting the command line tool with a nonzero error code from `panic!` and implement it by hand. A nonzero exit status is a convention to signal to the process that called our program that the program exited with an error state.
+
+```rs
+use std::process;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = Config::new(&args).unwrap_or_else(|err| {
+        println!("Problem parsing arguments: {}", err);
+        process::exit(1);
+    });
+
+    // --snip--
+```
+
+In this listing, we have used a method we have not covered before: `unwrap_or_else`, which is defined on `Result<T, E>` by the standard library. Using `unwrap_or_else` allows us to define some custom non-panic! error handling. If the `Result` is an `Ok` value, this method's behavior is similar to `unwrap`, it returns the inner value `Ok` is wrapping. However, if the value is an `Err` value, this method calls the code in the *closure*, which is an anonymous function we define and pass as an argument to `unwrap_or_else`. We will cover closures in more detail in chapter 13. For now, you just need to know that `unwrap_or_else` will pass the inner value of the `Err`.
+
+We’ve added a new `use` line to bring `process` from the standard library into scope. The code in the closure that will be run in the error case is only two lines: we print the `err` value and then call `process::exit`. The `process::exit` function will stop the program immediately and return the number that was passed as the exit status code. This is similar to the panic!-based handling we used before, but we no longer get all the extra output. Let’s try it:
+
+```
+$ cargo run
+   Compiling minigrep v0.1.0 (file:///projects/minigrep)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.48 secs
+     Running `target/debug/minigrep`
+Problem parsing arguments: not enough arguments
+```
+
+Great! This output is much friendlier for our users.
 
 ### Extracting Logic from main
 
