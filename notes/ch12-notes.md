@@ -258,9 +258,9 @@ struct Config {
     filename: String,
 }
 
-fn parse_config(args: &[String]) -> Config -> {
-    let query = &args[1].clone;
-    let filename = &args[2].clone;
+fn parse_config(args: &[String]) -> Config{
+    let query = args[1].clone();
+    let filename = args[2].clone();
 
    Config { query, filename }
 }
@@ -303,9 +303,9 @@ struct Config {
 }
 
 impl Config {
-    fn new(args: &[String]) -> Config -> {
-        let query = &args[1].clone;
-        let filename = &args[2].clone;
+    fn new(args: &[String]) -> Config {
+        let query = args[1].clone();
+        let filename = args[2].clone();
 
         Config { query, filename }
     }
@@ -416,12 +416,162 @@ Problem parsing arguments: not enough arguments
 Great! This output is much friendlier for our users.
 
 ### Extracting Logic from main
+Now that we’ve finished refactoring the configuration parsing, let’s turn to the program’s logic. As we stated in “Separation of Concerns for Binary Projects”, we’ll extract a function named `run` that will hold all the logic currently in the `main` function that isn’t involved with setting up configuration or handling errors. When we’re done, `main` will be concise and easy to verify by inspection, and we’ll be able to write tests for all the other logic.
+
+Next snippet, shows the extracted `run` function. For now, we are just making the small, incremental improvement of extracting the function. We are still defining the function in `src/main.rs`.
+
+```rs
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = Config::new(&args).unwrap_or_else(|err| {
+        prinln!("Problem parsing arguments: {}", err);
+        process::exit(1);
+    });
+
+    println!("Searching for {}", config.query);
+    println!("In file {}", config.filename);
+
+    run(config);
+
+}
+
+fn run(config: Config) {
+    let contents = fs::read_to_string(config.filename)
+        .expect("Something went wrong reading the file");
+
+    println!("With text:\n{}", contents)
+}
+
+    // --snip--
+```
+
+The `run` function now contains all the remaining logic from `main`, starting from reading the file. The `run` function takes the `Config` instance as an argument.
 
 #### Returning Errors from the run Function
+With the remaining program logic separated into the `run` function, we can improve the error handling, as we did with `Config::new`. Instead of allowing the program to panic by calling `expect`, the `run` function will return a `Result<T, E>` when something goes wrong. This will let us further consolidate into `main` the logic around handling errors in user friendly way. Below the changes we need to make to the signature and the body of the `run` function.
+
+```rs
+use std::error:Error;
+
+// --snip--
+
+fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.filename)?;
+
+    println!("With text:\n{}", contents);
+
+    Ok(());
+}
+```
+
+We’ve made three significant changes here.
+
+First, we changed the return type of the run function to `Result<(), Box<dyn Error>>`. This function previously returned the unit type, `()`, and we keep that as the value returned in the `Ok` case. For the error type, we used the *trait* object `Box<dyn Error>` (and we’ve brought `std::error::Error` into scope with a use statement at the top). We’ll cover trait objects in Chapter 17. For now, just know that `Box<dyn Error>` means the function will return a type that implements the `Error` trait, but we don’t have to specify what particular type the return value will be. This gives us flexibility to return error values that may be of different types in different error cases. The `dyn` keyword is short for “dynamic.”
+
+Second, we’ve removed the call to expect in favor of the `?` operator, as we talked about in Chapter 9. Rather than `panic!` on an error, `?` will return the error value from the current function for the caller to handle.
+
+Third, the `run` function now returns an `Ok` value in the success case. We’ve declared the `run` function’s success type as `()` in the signature, which means we need to wrap the unit type value in the `Ok` value. This `Ok(())` syntax might look a bit strange at first, but using `()` like this is the idiomatic way to indicate that we’re calling run for its side effects only; it doesn’t return a value we need.
+
+When you run this code, it will compile but will display a warning:
+
+```
+warning: unused `std::result::Result` that must be used
+  --> src/main.rs:17:5
+     ||
+     17 |     run(config);
+     ||
+     = note: #[warn(unused_must_use)] on by default
+     = note: this `Result` may be an `Err` variant, which should be handled
+```
+
+Rust tells us that our code ignored the Result value and the Result value might indicate that an error occurred. But we’re not checking to see whether or not there was an error, and the compiler reminds us that we probably meant to have some error-handling code here! Let’s rectify that problem now.
+
 #### Handling Errors Returned from run in main
+We’ll check for errors and handle them using a technique similar to one we used with `Config::new`, but with a slight difference.
+
+```rs
+fn main() {
+    // --snip--
+    println!("Searching for {}", config.query);
+    println!("In file {}", config.filename);
+
+    if let Err(e) = run(config) {
+        println!("Application error: {}", e);
+        process::exit(1);
+    }
+}
+
+```
+
+We use `if let` rather than `unwrap_or_else` to check whether run returns an `Err` value and call `process::exit(1)` if it does. The run function doesn’t return a value that we want to unwrap in the same way that `Config::new` returns the `Config` instance. Because run returns `()` in the success case, we only care about detecting an error, so we don’t need `unwrap_or_else` to return the unwrapped value because it would only be `()`.
+
+The bodies of the if let and the `unwrap_or_else` functions are the same in both cases: we print the error and exit.
 
 ### Splitting Code into a Library Crate
+Our `minigrep` project is looking good so far! Now we’ll split the `src/main.rs` file and put some code into the `src/lib.rs` file so we can test it and have a `src/main.rs` file with fewer responsibilities.
+
+Let’s move all the code that isn’t the main function from `src/main.rs` to `src/lib.rs`:
+
+- The `run` function definition
+- The relevant `use` statements
+- The definition of `Config`
+- The `Config::new` function definition
+
+Next code show the content of the `src/lib.rs`
+
+```rs
+use std::error::Error;
+use std::fs;
+
+pub struct Config {
+    pub query: String,
+        pub filename: String,
+}
+
+impl Config {
+    pub fn new(args: &[String]) -> Result<Config, &'static str> {
+            // --snip--
+    }
+}
+
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    // --snip--
+}
+```
+We’ve made liberal use of the `pub` keyword: on `Config`, on its fields and its new method, and on the run function. We now have a library crate that has a public API that we can test!
+
+Now we need to bring the code we moved to `src/lib.rs` into the scope of the binary crate in `src/main.rs`, as shown below:
  
+```rs
+use std::env;
+use std::process;
+
+use minigrep::Config;
+
+fn main() {
+    // --snip--
+    if let Err(e) = minigrep::run(config) {
+        // --snip--
+    }
+}
+```
+
+We add a use `minigrep::Config` line to bring the `Config` type from the library crate into the binary crate’s scope, and we prefix the `run` function with our crate name. Now all the functionality should be connected and should work. Run the program with `cargo run` and make sure everything works correctly.
+
+Whew! That was a lot of work, but we’ve set ourselves up for success in the future. Now it’s much easier to handle errors, and we’ve made the code more modular. Almost all of our work will be done in src/lib.rs from here on out.
+
+Let’s take advantage of this newfound modularity by doing something that would have been difficult with the old code but is easy with the new code: we’ll write some tests!
+
 ## 4. Developing the Library's Functionality with Test Drive Development
+
+### Writing a Failing Test ###
+
+### Writing Code to Pass the Test ###
+#### Iterating Through Lines with the lines Method ####
+#### Searching Each Line for the Query ####
+#### Storing Matching Lines ####
+#### Using the search Function in the run Function ####
+
 ## 5. Working with environment variables
 ## 6. Writing Error Messages
