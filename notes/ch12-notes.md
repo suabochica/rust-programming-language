@@ -672,9 +672,111 @@ Currently, our test is failing because we always return an empty vector. To fix 
 Let’s work through each step, starting with iterating through lines.
 
 #### Iterating Through Lines with the lines Method ####
+Rust has a helpful method to handle line by line iteration of string, conveniently name `lines`, that works like:
+
+```rs
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    for line in contents.lines() {
+        // do something with line
+    }
+}
+```
+
+The `lines` method returns an iterator. Recall that before we used a `for` loop with a iterator to run some code on each item in a collection. 
+
 #### Searching Each Line for the Query ####
+Next, we’ll check whether the current line contains our query string. Fortunately, strings have a helpful method named `contains` that does this for us! Add a call to the `contains` method in the search function, as shown below:
+
+```rs
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    for line in contents.lines() {
+        if line.contains(query) {
+            // do something with line
+        }
+    }
+}
+```
+
 #### Storing Matching Lines ####
+We also need a way to store the lines that contain our query string. For that, we can make a mutable vector before the `for` loop and call the push method to store a `line` in the vector. After the `for` loop, we return the vector, as show next:
+
+```rs
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let mut results = Vec::new();
+
+    for line in contents.lines() {
+        if line.contains(query) {
+            results.push(line);
+        }
+    }
+
+    results
+}
+```
+
+Now the search function should return only the lines that contain `query`, and our test should pass. Let’s run the test:
+
+```
+$ cargo test
+--snip--
+running 1 test
+test tests::one_result ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+Our test passed, so we know it works!
+
+At this point, we could consider opportunities for refactoring the implementation of the search function while keeping the tests passing to maintain the same functionality. The code in the search function isn’t too bad, but it doesn’t take advantage of some useful features of iterators. We’ll return to this example in Chapter 13, where we’ll explore iterators in detail, and look at how to improve it.
+
 #### Using the search Function in the run Function ####
+Now that the `search` function is working and tested, we need to call `search` from our `run` function. We need to pass the `config.query` value and the contents that `run` reads from the file to the `search` function. Then `run` will print each line returned from search:
+
+```rs
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let contents = fs::read_to_string(config.filename)?;
+
+    for line in search(&config.query, &contents) {
+        println!("{}", line);
+    }
+
+    Ok(())
+}
+```
+We’re still using a `for` loop to return each line from search and print it.
+
+Now the entire program should work! Let’s try it out, first with a word that should return exactly one line from the Emily Dickinson poem, “frog”:
+
+```
+$ cargo run frog poem.txt
+   Compiling minigrep v0.1.0 (file:///projects/minigrep)
+       Finished dev [unoptimized + debuginfo] target(s) in 0.38 secs
+            Running `target/debug/minigrep frog poem.txt`
+How public, like a frog
+```
+
+Cool! Now let’s try a word that will match multiple lines, like “body”:
+
+```
+
+ run body poem.txt
+     Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+          Running `target/debug/minigrep body poem.txt`
+I’m nobody! Who are you?
+Are you nobody, too?
+How dreary to be somebody!
+```
+
+And finally, let’s make sure that we don’t get any lines when we search for a word that isn’t anywhere in the poem, such as “monomorphization”:
+
+```
+$ cargo run monomorphization poem.txt
+    Finished dev [unoptimized + debuginfo] target(s) in 0.0 secs
+         Running `target/debug/minigrep monomorphization poem.txt`
+```
+
+Excellent! We’ve built our own mini version of a classic tool and learned a lot about how to structure applications. We’ve also learned a bit about file input and output, lifetimes, testing, and command line parsing.
+         
+To round out this project, we’ll briefly demonstrate how to work with environment variables and how to print to standard error, both of which are useful when you’re writing command line programs.
 
 ## 5. Working with environment variables
 ## 6. Writing Error Messages
