@@ -48,7 +48,6 @@ route(IpAddrKind::v6);
 Using enums has even more advantages. Thinking more about our IP address type, at the moment we do not have a way to store the actual IP address data. We only know what kind it is. Given that you just learned about structs, you might tackle this problem as shown in the next snippet.
 
 ```rust
-
 #![allow(unused_variables)]
 fn main() {
 enum IpAddrKind {
@@ -96,7 +95,6 @@ We attach data to each variant of the enum directly, so there is no need for an 
 There is another advantage to using enum rather than a struct, each variant can have different types and amounts of associated data. Version four type OP addresses will always have four numeric components that will have values between 0 and 255. If we wanted to store `V4` addresses as four `u8` values but still express `V6` addresses as one `String` value, we would not be able to with a struct. Enums handle this case with ease:
 
 ```rust
-
 #![allow(unused_variables)]
 fn main() {
 enum IpAddr {
@@ -114,7 +112,6 @@ let loopback = IpAddr::V6(String::from("::1"));
 We have shown several different ways to define data structures to store version four and version six IP addresses. However, as it turns out, wanting to store IP addresses and encode which kind they are is so common that _the standard library has a definition we can use_. Let's look at how the standard library defines `IpAddr`. It has the exact enum and variants that when have defined and used, but it embeds the address data inside the variants in the form of two different structs, which are defined differently for each variant.
 
 ```rust
-
 #![allow(unused_variables)]
 fn main() {
 struct Ipv4Addr {
@@ -289,7 +286,6 @@ Think of a `match` expression as being like a coin-sorting machine. Coins slides
 Because we just mentioned coins, let's use them as an example using `match`. We can write a function that can take an unknown United States coin and, in a similar way as the counting machine, determine which coin it is and return its values in cents.
 
 ```rust
-
 #![allow(unused_variables)]
 fn main() {
 enum Coin {
