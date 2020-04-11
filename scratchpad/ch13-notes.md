@@ -745,10 +745,105 @@ With our new knowledge about iterators, we can change the `new` function to take
 Once `Config::new` takes ownership of the iterator and stops using indexing operations that borrow, we can move the `String` values from the iterator into `Config` rather than calling clone and making a new allocation.
 
 #### Using the Returning Iterator Directly ####
+If we check the current state of our `minigrep` project the _main.rs_ file should look like this:
+
+```rs
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let config = Config::new(&args).unwrap_or_else(|err| {
+        eprintln!("Problem parsing arguments: {}", err);
+        process::exit(1);
+    });
+    
+    // --snip--
+}
+```
+
+We will change the start of the `main` function that we had to the next code. This won't compile until we updated `Config::new` as well.
+
+```rs
+fn main() {
+    let config = Config::new(env::&args()).unwrap_or_else(|err| {
+        eprintln!("Problem parsing arguments: {}", err);
+        process::exit(1);
+    });
+    
+    // --snip--
+}
+```
+
+The `env::args` function returns an iterator! Rather than collecting the iterator values into a vector and then passing a slice to `Config::new`, now we’re passing ownership of the iterator returned from `env::args` to `Config::new` directly.
+
+Next, we need to update the definition of `Config::new`. In your I/O project’s *src/lib.rs* file, let’s change the signature of `Config::new` to look like the below code. This still won’t compile because we need to update the function body.
+
+```rs
+impl Config {
+    pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
+        // --snip--
+
+```
+
+The standard library documentation for the `env::args` function shows that the type of the iterator it returns is `std::env::Args`. We’ve updated the signature of the `Config::new` function so the parameter args has the type `std::env::Args` instead of `&[String]`. Because we’re taking ownership of args and we’ll be mutating args by iterating over it, we can add the mut keyword into the specification of the args parameter to make it mutable.
 
 #### Using Iterator Trait Methods Instead of Indexing ####
+Next, we’ll fix the body of `Config::new`. The standard library documentation also mentions that `std::env::Args` implements the `Iterator` trait, so we know we can call the `next` method on it! Below the updates in the implementation of the `Config` struct inside the _lib.rs_:
+
+```rs
+impl Config {
+    pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
+        args.next();
+
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Did not get a query string")l
+        };
+
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Did not get a file name")l
+        }
+
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+
+        Ok(Config { query, filename, case_sensitive })
+    }
+}
+```
+
+Remember that the first value in the return value of `env::args` is the name of the program. We want to ignore that and get to the next value, so first we call `next` and do nothing with the return value. Second, we call `next` to get the value we want to put in the query field of `Config`. If `next` returns a `Some`, we use a `match` to extract the value. If it returns `None`, it means not enough arguments were given and we return early with an `Err` value. We do the same thing for the `filename` value.
 
 ### Making Coder Clearer with Iterator Adaptors ###
+We can also take advantage of iterators in the search function in our I/O project. Currently the code of the `search` function is:
 
+```rs
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let mut results = Vec::new();
+
+    for line in contents.lines() {
+        if line.contains(query) {
+            results.push(line);
+        }
+    }
+
+    results
+}
+```
+
+We can write this code in a more concise way using iterator adaptor methods. Doing so also lets us avoid having a mutable intermediate `results` vector. The functional programming style prefers to minimize the amount of mutable state to make code clearer. Removing the mutable state might enable a future enhancement to make searching happen in parallel, because we wouldn’t have to manage concurrent access to the `results` vector. Below the changes using the iterator adaptors.
+
+```rs
+pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    contents.lines()
+        .filter(|line| line.contains(query))
+        .collect()
+}
+```
+
+Recall that the purpose of the `search` function is to return all lines in `contents` that contain the `query`. Similar to the `filter` last example, this code uses the filter adaptor to keep only the lines that `line.contains(query)` returns `true` for. We then collect the matching lines into another vector with `collect`. Much simpler! Feel free to make the same change to use iterator methods in the `search_case_insensitive` function as well.
+
+The next logical question is which style you should choose in your own code and why: Using the clone method or using iterators.Most Rust programmers prefer to use the iterator style. It’s a bit tougher to get the hang of at first, but once you get a feel for the various iterator adaptors and what they do, iterators can be easier to understand. Instead of fiddling with the various bits of looping and building new vectors, the code focuses on the high-level objective of the loop. This abstracts away some of the commonplace code so it’s easier to see the concepts that are unique to this code, such as the filtering condition each element in the iterator must pass.
+
+But are the two implementations truly equivalent? The intuitive assumption might be that the more low-level loop will be faster. Let’s talk about performance.
 
 ## Comparing Performance: Loops vs Iterators ##
