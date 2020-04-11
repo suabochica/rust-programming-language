@@ -714,6 +714,41 @@ Note that `zip` produces only four pairs; the theoretical fifth pair `(5, None)`
 All of these method calls are possible because we specified how the `next` method works, and the standard library provides default implementations for other methods that call `next`.
 
 ## Improving our I/O Project ##
+With this new knowledge about iterators, we can improve the I/O project in Chapter 12 by using iterators to make places in the code clearer and more concise. Let’s look at how iterators can improve our implementation of the `Config::new` function and the `search` function.
+
+### Removing a clone Using an Iterator ###
+In the first implementation of the `minigrep` project we added a code that took a slice of `String` values and created an instance of the `Config` struct by indexing into the slice and cloning the values, allowing the `Config` struct to own thos values. Next snippet remember us the implementation of the `Config::new` function.
+
+```rs
+impl Config {
+    pub fn new(args: &[String]) -> Result<Config, &'static str> {
+        if args.len() < 3 {
+            return Err("not enough arguments");
+        }
+
+        let query = args[1].clone();
+        let filename = args[2].clone();
+
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+
+        Ok(Config { query, filename, case_sensitive })
+    }
+}
+```
+
+At the time, we said not to worry about the inefficient `clone` calls because we would remove them in the future. Well, that time is now!
+
+We needed `clone` here because we have a slice with `String` elements in the parameter `args`, but the new function doesn’t own `args`. To return ownership of a `Config` instance, we had to clone the values from the query and filename fields of `Config` so the `Config` instance can own its values.
+
+With our new knowledge about iterators, we can change the `new` function to take ownership of an iterator as its argument instead of borrowing a slice. We’ll use the iterator functionality instead of the code that checks the length of the slice and indexes into specific locations. This will clarify what the `Config::new` function is doing because the iterator will access the values.
+
+Once `Config::new` takes ownership of the iterator and stops using indexing operations that borrow, we can move the `String` values from the iterator into `Config` rather than calling clone and making a new allocation.
+
+#### Using the Returning Iterator Directly ####
+
+#### Using Iterator Trait Methods Instead of Indexing ####
+
+### Making Coder Clearer with Iterator Adaptors ###
 
 
 ## Comparing Performance: Loops vs Iterators ##
