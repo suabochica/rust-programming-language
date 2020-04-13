@@ -12,8 +12,28 @@
    CLOSED: [2020-03-19 Thu 08:25]
 ** DONE Reading a File
    CLOSED: [2020-03-21 Sat 13:57]
-** TODO Refactoring to Improve Modularity and Error Handling
-** TODO Developing the Library's Functionality with Test Drive Development
-** TODO Working with environment variables
-** TODO Writing Error Messages
-
+** DONE Refactoring to Improve Modularity and Error Handling
+   CLOSED: [2020-04-06 Mon 08:10]
+** DONE Developing the Library's Functionality with Test Drive Development
+   CLOSED: [2020-04-04 Sat 08:10]
+** DONE Working with environment variables
+   CLOSED: [2020-04-05 Sun 08:10]
+** DONE Writing Error Messages
+   CLOSED: [2020-04-06 Mon 08:10]
+* Chapter 13: Functional Language Features: Iterators and Closures
+  DEADLINE: <2020-03-09 Mon>
+** DONE Closures: Anonymous functions that can capture their environment
+   CLOSED: [2020-04-08 Wed 08:25]
+** DONE Processing a series of items with Iterators
+   CLOSED: [2020-04-09 Thu 13:57]
+** DONE Improving our I/O Project
+   CLOSED: [2020-04-10 Fri 08:10]
+** DONE Comparing Performance: Loops vs Iterators
+* Chapter 14: More About Cargo and Crates.io
+  DEADLINE: <2020-03-09 Mon>
+** DONE Customizing Builds with Release Profiles
+   CLOSED: [2020-04-12 Sun 08:16]
+** TODO Publishing a Crate to Crates.io
+** TODO Cargo Workspaces
+** TODO Installing Binaries from Crates.io with cargo install
+** TODO Extending Cargo with Custom Coomands 
