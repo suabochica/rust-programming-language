@@ -9,5 +9,7 @@ enums/target/*
 restaurant/target/*
 adder/target/*
 minigrep/target/*
+minigre_clo_iter/target/*
+custom_crate/target/*
 
 **/.DS_Store
