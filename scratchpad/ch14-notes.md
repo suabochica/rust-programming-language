@@ -246,12 +246,104 @@ In cases where there are many nested modules, re-exporting the types at the top 
 Creating a useful public API structure is more of an art than a science, and you can iterate to find the API that works best for your users. Choosing `pub use` gives you flexibility in how you structure your crate internally and decouples that internal structure from what you present to your users. Look at some of the code of crates you’ve installed to see if their internal structure differs from their public API.
 
 ### Setting Up a Crates.io Account ###
+Before you can publish any crates, you need to create an account on crates.io and get an API token. To do so, visit the home page at crates.io and log in via a GitHub account.
+
+Once you’re logged in, visit your account settings at https://crates.io/me/ and retrieve your API key. Then run the cargo login command with your API key, like this:
+
+```
+$ cargo login abcdefghijklmnopqrstuvwxyz012345
+```
+
+This command will inform Cargo of your API token and store it locally in ~/.cargo/credentials. Note that this token is a secret: do not share it with anyone else. If you do share it with anyone for any reason, you should revoke it and generate a new token on crates.io.
 
 ### Adding Metadata to a New Crate ###
+Now that you have an account, let’s say you have a crate you want to publish. Before publishing, you’ll need to add some metadata to your crate by adding it to the `[package]` section of the crate’s *Cargo.toml* file.
+
+Your crate will need a unique name. While you’re working on a crate locally, you can name a crate whatever you’d like. However, crate names on crates.io are allocated on a first-come, first-served basis. Once a crate name is taken, no one else can publish a crate with that name. Before attempting to publish a crate, search for the `name` you want to use on the site. If the name has been used by another crate, you will need to find another name and edit the name field in the *Cargo.toml* file under the `[package]` section to use the new name for publishing, like so:
+
+```toml
+[package]
+name = "guessing_name"
+```
+
+Even if you’ve chosen a unique name, when you run `cargo publish` to publish the crate at this point, you’ll get a warning and then an error:
+
+```
+$ cargo publish
+    Updating registry `https://github.com/rust-lang/crates.io-index`
+warning: manifest has no description, license, license-file, documentation,
+homepage or repository.
+--snip--
+error: api errors: missing or empty metadata fields: description, license.
+```
+
+The reason is that you’re missing some crucial information: a description and license are required so people will know what your crate does and under what terms they can use it. To rectify this error, you need to include this information in the Cargo.toml file.
+
+Add a description that is just a sentence or two, because it will appear with your crate in search results. For the license field, you need to give a license identifier value. The [Linux Foundation’s Software Package Data Exchange (SPDX)](http://spdx.org/licenses/) lists the identifiers you can use for this value. For example, to specify that you’ve licensed your crate using the `MIT` License, add the `MIT` identifier:
+
+```toml
+[package]
+name = "guessing_name"
+license = "MIT"
+```
+
+With a unique name, the version, the author details that `cargo new` added when you created the crate, your description, and a license added, the Cargo.toml file for a project that is ready to publish might look like this:
+
+```toml
+[package]
+name = "guessing_game"
+version = "0.1.0"
+authors = ["Your Name <you@example.com>"]
+edition = "2018"
+description = "A fun game where you guess what number the computer has chosen."
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+```
+
+[Cargo’s documentation](Cargo’s documentation describes other metadata you can specify to ensure others can discover and use your crate more easily.) describes other metadata you can specify to ensure others can discover and use your crate more easily.
 
 ### Publishing to Crates.io ###
+Now that you’ve created an account, saved your API token, chosen a name for your crate, and specified the required metadata, you’re ready to publish! Publishing a crate uploads a specific version to crates.io for others to use.### Removing Versions from Crates.io with cargo yank ###
 
-### Removing Versions from Crates.io with cargo yank ###
+Be careful when publishing a crate because a publish is permanent. The version can never be overwritten, and the code cannot be deleted. One major goal of crates.io is to act as a permanent archive of code so that builds of all projects that depend on crates from crates.io will continue to work. Allowing version deletions would make fulfilling that goal impossible. However, there is no limit to the number of crate versions you can publish.
+
+Run the `cargo publish` command. It should succeed now:
+
+```
+$ cargo publish
+ Updating registry `https://github.com/rust-lang/crates.io-index`
+Packaging guessing_game v0.1.0 (file:///projects/guessing_game)
+Verifying guessing_game v0.1.0 (file:///projects/guessing_game)
+Compiling guessing_game v0.1.0
+(file:///projects/guessing_game/target/package/guessing_game-0.1.0)
+ Finished dev [unoptimized + debuginfo] target(s) in 0.19 secs
+Uploading guessing_game v0.1.0 (file:///projects/guessing_game)
+```
+
+Congratulations! You’ve now shared your code with the Rust community, and anyone can easily add your crate as a dependency of their project.
+
+### Publishing a New Version of an Existing Crates ###
+When you’ve made changes to your crate and are ready to release a new version, you change the version value specified in your Cargo.toml file and republish. Use the [Semantic Versioning rules](https://semver.org) to decide what an appropriate next version number is based on the kinds of changes you’ve made. Then run cargo publish to upload the new version.
+
+### Removing a Versions from Crates.io ###
+Although you can’t remove previous versions of a crate, you can prevent any future projects from adding them as a new dependency. This is useful when a crate version is broken for one reason or another. In such situations, Cargo supports *yanking* a crate version.
+
+Yanking a version prevents new projects from starting to depend on that version while allowing all existing projects that depend on it to continue to download and depend on that version. Essentially, a yank means that all projects with a *Cargo.lock* will not break, and any future *Cargo.lock* files generated will not use the yanked version.
+
+To yank a version of a crate, run `cargo yank` and specify which version you want to yank:
+
+```
+$ cargo yank --vers 1.0.1
+```
+
+By adding `--undo` to the command, you can also undo a yank and allow projects to start depending on a version again:
+
+```
+$ cargo yank --vers 1.0.1 --unod
+```
+
+A yank *does not* delete any code. For example, the yank feature is not intended for deleting accidentally uploaded secrets. If that happens, you must reset those secrets immediately.
 
 ## 3. Cargo Workspaces
 ## 4. Installing Binaries from Crates.io with cargo install
