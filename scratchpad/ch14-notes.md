@@ -346,5 +346,126 @@ $ cargo yank --vers 1.0.1 --unod
 A yank *does not* delete any code. For example, the yank feature is not intended for deleting accidentally uploaded secrets. If that happens, you must reset those secrets immediately.
 
 ## 3. Cargo Workspaces
+In Chapter 12, we built a package that included a binary crate and a library crate. As your project develops, you might find that the library crate continues to get bigger and you want to split up your package further into multiple library crates. In this situation, Cargo offers a feature called *workspaces* that can help manage multiple related packages that are developed in tandem.
+
+### Create a Workspace
+A *workspace* is a set of packages that share the same Cargo.lock and output directory. Let’s make a project using a workspace—we’ll use trivial code so we can concentrate on the structure of the workspace. There are multiple ways to structure a workspace; we’re going to show one common way. We’ll have a workspace containing a binary and two libraries. The binary, which will provide the main functionality, will depend on the two libraries. One library will provide an `add_one` function, and a second library an `add_two` function. These three crates will be part of the same workspace. We’ll start by creating a new directory for the workspace:
+
+```
+$ mkdir add
+$ cd add
+```
+
+Next, in the add directory, we create the Cargo.toml file that will configure the entire workspace. This file won’t have a `[package]` section or the metadata we’ve seen in other *Cargo.toml* files. Instead, it will start with a `[workspace]` section that will allow us to add members to the workspace by specifying the path to our binary crate; in this case, that path is *adder*:
+
+```toml
+[workspace]
+
+members = [
+    "adder",
+]
+```
+
+Next, we will create the `adder` binary crate by running `cargo new` within the _add_ directory:
+
+```
+$ cargo new adder
+```
+
+At this point, we can build the workspace by running cargo build. The files in your add directory should look like this:
+
+```
+├── Cargo.lock
+├── Cargo.toml
+├── adder
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs
+└── target
+```
+
+The workspace has one target directory at the top level for the compiled artifacts to be placed into; the `adder` crate doesn’t have its own *target* directory. Even if we were to run `cargo build` from inside the *adder* directory, the compiled artifacts would still end up in *add/target* rather than *add/adder/target*. Cargo structures the *target* directory in a workspace like this because the crates in a workspace are meant to depend on each other. If each crate had its own *target* directory, each crate would have to recompile each of the other crates in the workspace to have the artifacts in its own *target* directory. By sharing one *target* directory, the crates can avoid unnecessary rebuilding.
+
+### Creating the Second Crate in the Workspace
+Next, let’s create another member crate in the workspace and call it add-one. Change the top-level Cargo.toml to specify the add-one path in the members list:
+
+```
+[workspace]
+
+members = [
+    "adder",
+    "add-one",
+]
+```
+
+Then generate a new library crate named `add-one`:
+
+```
+$ cargo new add-one --lib
+     Created library `add-one` project
+```
+
+Your add directory should now have these directories and files:
+
+```
+├── Cargo.lock
+├── Cargo.toml
+├── add-one
+│   ├── Cargo.toml
+│   └── src
+│       └── lib.rs
+├── adder
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs
+└── target
+```
+
+Now, let's add the `add_one` function in _add-one/src/lib.rs_ file:
+
+```rs
+pub fn add_one(x: i32) -> i32 {
+    x + 1
+}
+```
+Now that we have a library crate in the workspace, we can have the binary crate `adder` depend on the library crate `add-one`. First, we’ll need to add a path dependency on `add-one` to *adder/Cargo.toml*.
+
+```toml
+[dependencies]
+add-one = { path = "../add-one" }
+```
+
+Cargo doesn’t assume that crates in a workspace will depend on each other, so we need to be explicit about the dependency relationships between the crates.
+
+Next, let’s use the `add_one` function from the `add-one` crate in the `adder` crate. Open the *adder/src/main.rs* file and add a `use` line at the top to bring the new `add-one` library crate into scope. Then change the `main` function to call the `add_one` function, as shown next:
+
+```rs
+use add_one;
+
+fn main() {
+    let num = 10;
+    println!("Hello, world! {} plus one is {}!", num, add_one::add_one(num));
+}
+```
+
+Let’s build the workspace by running cargo build in the top-level add directory!
+
+```
+$ cargo build
+```
+
+To run the binary crate from the *add* directory, we need to specify which package in the workspace we want to use by using the `-p` argument and the package name with `cargo run`:
+
+```
+$ cargo run -p adder
+```
+
+This runs the code in _adder/src/main.rs_, which depend on the `add-one` crate.
+
+
+#### Depending on an External Crate in a Workspace ####
+
+#### Adding a Test to a Workspace
+
 ## 4. Installing Binaries from Crates.io with cargo install
 ## 5. Extending Cargo with Custom Coomands 

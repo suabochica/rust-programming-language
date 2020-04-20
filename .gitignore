@@ -8,6 +8,7 @@ rectangles/target/*
 enums/target/*
 restaurant/target/*
 adder/target/*
+add/target/*
 minigrep/target/*
 minigre_clo_iter/target/*
 custom_crate/target/*
