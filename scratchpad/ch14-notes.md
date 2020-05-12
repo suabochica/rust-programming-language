@@ -462,8 +462,42 @@ $ cargo run -p adder
 
 This runs the code in _adder/src/main.rs_, which depend on the `add-one` crate.
 
-
 #### Depending on an External Crate in a Workspace ####
+Notice that the workspace has only one *Cargo.lock* file at the top level of the workspace rather than having a *Cargo.lock* in each crate’s directory. This ensures that all crates are using the same version of all dependencies. If we add the rand crate to the *adder/Cargo.toml* and *add-one/Cargo.toml* files, Cargo will resolve both of those to one version of rand and record that in the one *Cargo.lock*. Making all crates in the workspace use the same dependencies means the crates in the workspace will always be compatible with each other. Let’s add the `rand` crate to the `[dependencies]` section in the *add-one/Cargo.toml* file to be able to use the `rand` crate in the `add-one` crate:
+
+```toml
+[dependencies]
+    rand = "0.5.5"
+```
+
+We can now add `use rand;` to the _add-one/src/lib.rs file, and building the whole workspace by running `cargo build` in the _add_ directory will bring in and compile the `rand` crate:
+
+```
+$ cargo build
+     Updating crates.io index
+ Downloaded rand v0.5.5
+      --snip--
+      Compiling rand v0.5.6
+      Compiling add-one v0.1.0 (file:///projects/add/add-one)
+      Compiling adder v0.1.0 (file:///projects/add/adder)
+        Finished dev [unoptimized + debuginfo] target(s) in 10.18s
+```
+
+The top-level *Cargo.lock* now contains information about the dependency of `add-one` on `rand`. However, even though rand is used somewhere in the workspace, we can’t use it in other crates in the workspace unless we add `rand` to their *Cargo.toml* files as well. For example, if we add use rand; to the *adder/src/main.rs* file for the `adder` crate, we’ll get an error:
+
+```
+$ carog build
+  --snip--
+  Compiling adder v0.1.0 (file:///projects/add/adder)
+error[E0432]: unresolved import `rand`
+  --> adder/src/main.rs:2:5
+  |
+2 | use rand;
+  |
+  ^ no `rand` external crate
+```
+
+To fix this, edit the *Cargo.toml* file for the `adder` crate and indicate that `rand` is a dependency for that crate as well. Building the `adder` crate will add `rand` to the list of dependencies for `adder` in `Cargo.lock`, but no additional copies of `rand` will be downloaded. Cargo has ensured that every crate in the workspace using the `rand` crate will be using the same version. Using the same version of `rand` across the workspace saves space because we won’t have multiple copies and ensures that the crates in the workspace will be compatible with each other.
 
 #### Adding a Test to a Workspace
 
