@@ -577,4 +577,25 @@ For additional practice, add an `add-two` crate to this workspace in a similar w
 As your project grows, consider using a workspace: it’s easier to understand smaller, individual components than one big blob of code. Furthermore, keeping the crates in a workspace can make coordination between them easier if they are often changed at the same time.
 
 ## 4. Installing Binaries from Crates.io with cargo install
+The `cargo install` command allows you to install and use binary crate locally. This is not intended to replace system packages; it is a convenient way for Rust developers to install tools that others have share into create.io. Note that you can only install packages have binary targets. A _binary target_ is a runnable program that is created if the crate has a _src/main.rs_ file or another file specified as a binary, as opposed to a library target that is not runnable on its own but is suitable for including within other programs. Usually, crates have information in the _README_ file about whether a crate is a library, has a binary target, or both.
+
+All binaries installed with `cargo install` are stores in the installation root's bin folder. If you installed rust using _rustup.rs_ and do not have any custom configuration, this directory will be _$HOME/.cargo/bin_ ensure that directory is in your `$PATH` to be able to run programs yo have installed with `cargo install`.
+
+For example, in chapter 12, we mentioned there is a Rust implementation of the `grep` tool called `ripgrep` for searching files. If we want to install `rigrep`, we can run the following:
+
+```
+$ cargo install ripgrep
+    Updating crates.io index
+  Downloaded ripgrep v11.0.2
+  Downloaded 1 crate (243.3 KB) in 0.88s
+  Installing ripgrep v11.0.2
+--snip--
+  Compiling ripgrep v11.0.2
+  Finished release [optimized] target(s) in 3m 10s
+  Installing ~/.cargo/bin/rg
+  Installed package `ripgrep v11.0.2` (executable `rg`)
+```
+
+The second-to-last line of the output shows the location and the name of the installed binary, which in the case of `ripgrep` is `rg`. As long as the installation directory is in your `$PATH`, as mentioned previously, you can then run `rg --help` ans start using a faster, rustier tool for searching files.
+
 ## 5. Extending Cargo with Custom Coomands 
