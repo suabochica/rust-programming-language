@@ -33,7 +33,9 @@
   DEADLINE: <2020-03-09 Mon>
 ** DONE Customizing Builds with Release Profiles
    CLOSED: [2020-04-12 Sun 08:16]
-** TODO Publishing a Crate to Crates.io
-** TODO Cargo Workspaces
+** DONE Publishing a Crate to Crates.io
+   CLOSED: [2020-04-13 Mon 07:47]
+** DONE Cargo Workspaces
+   CLOSED: [2020-05-13 Wed 07:47]
 ** TODO Installing Binaries from Crates.io with cargo install
 ** TODO Extending Cargo with Custom Coomands 

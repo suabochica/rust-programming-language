@@ -500,6 +500,81 @@ error[E0432]: unresolved import `rand`
 To fix this, edit the *Cargo.toml* file for the `adder` crate and indicate that `rand` is a dependency for that crate as well. Building the `adder` crate will add `rand` to the list of dependencies for `adder` in `Cargo.lock`, but no additional copies of `rand` will be downloaded. Cargo has ensured that every crate in the workspace using the `rand` crate will be using the same version. Using the same version of `rand` across the workspace saves space because we won’t have multiple copies and ensures that the crates in the workspace will be compatible with each other.
 
 #### Adding a Test to a Workspace
+For another enhancement, let's add a test of the `add_one::add_one` function withing the `add_one` crate:
+
+```rs
+#![allow(unused_variables)]
+
+pub fn add_one(x: i32) -> i32 {
+    x + 1
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_works(){
+        assert_eq!(3, add_one(2));
+    }
+}
+```
+
+Now run `cargo test` in the top-level _add_ directory:
+
+```
+$ cargo test
+   Compiling add-one v0.1.0 (/mnt/c/Users/suabochica/Development/rust-programming-language/add/add-one)
+   Compiling adder v0.1.0 (/mnt/c/Users/suabochica/Development/rust-programming-language/add/adder)
+    Finished test [unoptimized + debuginfo] target(s) in 1.23s
+     Running target/debug/deps/add_one-7922a26d90d5b4fe
+
+running 1 test
+test tests::it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+     Running target/debug/deps/adder-7edfe5089a92e142
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+   Doc-tests add-one
+
+running 0 tests 
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+The first section of the output shows that the `it_works` test in the `add-one `crate passed. The next section shows that zero tests were found in the `adder` crate, and then the last section shows zero documentation tests were found in the `add-one` crate. Running `cargo test` in a workspace structured like this one will run the tests for all the crates in the workspace.
+
+We can also run tests for one particular crate in a workspace from the top-level directory by using the `-p` flag and specifying the name of the crate we want to test:
+
+```
+$ cargo test -p add-one
+    Finished test [unoptimized + debuginfo] target(s) in 0.03s
+     Running target/debug/deps/add_one-7922a26d90d5b4fe
+
+running 1 test
+test tests::it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+
+   Doc-tests add-one
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+This output shows `cargo test` only ran the tests for the `add-one` crate and didn’t run the `adder` crate tests.
+
+If you publish the crates in the workspace to crates.io, each crate in the workspace will need to be published separately. The `cargo publish` command does not have an `--all` flag or a `-p` flag, so you must change to each crate’s directory and run `cargo publish` on each crate in the workspace to publish the crates.
+
+For additional practice, add an `add-two` crate to this workspace in a similar way as the `add-one` crate!
+
+As your project grows, consider using a workspace: it’s easier to understand smaller, individual components than one big blob of code. Furthermore, keeping the crates in a workspace can make coordination between them easier if they are often changed at the same time.
 
 ## 4. Installing Binaries from Crates.io with cargo install
 ## 5. Extending Cargo with Custom Coomands 
