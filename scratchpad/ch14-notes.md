@@ -598,4 +598,9 @@ $ cargo install ripgrep
 
 The second-to-last line of the output shows the location and the name of the installed binary, which in the case of `ripgrep` is `rg`. As long as the installation directory is in your `$PATH`, as mentioned previously, you can then run `rg --help` ans start using a faster, rustier tool for searching files.
 
-## 5. Extending Cargo with Custom Coomands 
+## 5. Extending Cargo with Custom Commands 
+Cargo is designed so you can extend it with new sub commands without having to modify Cargo. If a binary in your `$PATH` is name `cargo-something`, you can run it as if it was a Cargo sub command by running `cargo something`. Custom commands like this are also listed when you run `cargo --list`. Being able to use `cargo install` to install extensions and then run them just like the built-in Cargo tools is a super convenient benefit of Cargo design!
+
+
+## Summary
+Sharing code with Cargo and crates.io is part of what makes the Rust ecosystem useful for many different tasks. Rust's standard library is small and stable, but crates are easy to share, use, and improve on a timeline different from that of the language. Don't be shy about sharing code that is useful to you on crates.io. It is likely that it will be useful to someone else well.
