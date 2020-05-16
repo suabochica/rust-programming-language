@@ -110,13 +110,16 @@ enum Message {
     Quit,
     Move { x: i32, y: i32 },
     Write(String),
-    ChangeColor(i32, i32, i32)
+    ChangeColor(i32, i32, i32),
 }
 ```
 
 To determine how much space to allocate for a `Message` value, Rust goes through each of the variants to see which variant needs the most space. Rust sees that `Message::Quit` doesn’t need any space, `Message::Move` needs enough space to store two `i32` values, and so forth. Because only one variant will be used, the most space a `Message` value will need is the space it would take to store the largest of its variants.
 
 Contrast this with what happens when Rust tries to determine how much space a recursive type like the `List` enum needs. The compiler starts by looking at the `Cons` variant, which holds a value of type `i32` and a value of type `List`. Therefore, `Cons` needs an amount of space equal to the size of an `i32` plus the size of a `List`. To figure out how much memory the `List` type needs, the compiler looks at the variants, starting with the `Cons` variant. The `Cons` variant holds a value of type `i32` and a value of type `List`, and this process continues infinitely, as shown in Figure below:
+
+
+![image](../assets/15-01_cons_list.svg)
 
 #### Using Box to Get a Recursive Type with a Known Size
 Rust can’t figure out how much space to allocate for recursively defined types, so the compiler gives the error. But the error does include this helpful suggestion:
@@ -146,15 +149,31 @@ fn main() {
 
 The `Cons` variant will need the size of an `i32` plus the space to store the box’s pointer data. The `Nil` variant stores no values, so it needs less space than the `Cons` variant. We now know that any `List` value will take up the size of an `i32` plus the size of a box’s pointer data. By using a box, we’ve broken the infinite, recursive chain, so the compiler can figure out the size it needs to store a `List` value. Next figure shows what the `Cons` variant looks like now.
 
-!()
+![image](../assets/15-02_cons_list_hold_in_box.svg)
 
 Boxes provide only the indirection and heap allocation; they don’t have any other special capabilities, like those we’ll see with the other smart pointer types. They also don’t have any performance overhead that these special capabilities incur, so they can be useful in cases like the cons list where the indirection is the only feature we need. We’ll look at more use cases for boxes in Chapter 17, too.
 
 The `Box<T>` type is a smart pointer because it implements the `Deref` trait, which allows `Box<T>` values to be treated like references. When a `Box<T>` value goes out of scope, the heap data that the box is pointing to is cleaned up as well because of the `Drop` trait implementation. Let’s explore these two traits in more detail. These two traits will be even more important to the functionality provided by the other smart pointer types we’ll discuss in the rest of this chapter.
 
-
-
 ## 2. Treating Smart Pointers Like Regular References with the Deref Trait
+
+Implementing the `Deref` trait allows you to customize the behavior of the *dereference operator*, `*` (as opposed to the multiplication or glob operator). By implementing `Deref` in such a way that a smart pointer can be treated like a regular reference, you can write code that operates on references and use that code with smart pointers too.
+
+Let’s first look at how the dereference operator works with regular references. Then we’ll try to define a custom type that behaves like `Box<T>,` and see why the dereference operator doesn’t work like a reference on our newly defined type. We’ll explore how implementing the Deref trait makes it possible for smart pointers to work in ways similar to references. Then we’ll look at Rust’s *deref coercion* feature and how it lets us work with either references or smart pointers.
+
+> Note: There is one big difference betweent the `MyBox<T>` type we are about to built and the real `Box<T>`: our version will not store its data on the heap. We are focusing this example on `Deref`, so where the data is actually stored is less important than the pointer-like behavior.
+
+### Following the Pointer to the Value with the Dereference Operator
+
+### Using Box Like a Reference
+### Defining Our Own Smart Pointer
+### Treating a Type Like a Reference by Implementing the Deref Trait
+### Implicit Deref Coercions with Function and Methods
+### How Deref Coercion Interacts with Mutability
+
+
+
+
 ## 3. Running Code on Cleanup with the Drop Trait
 ## 4. Rc, the Reference Counted Smart Pointer
 ## 5. RefCell and the Interior Mutability Pattern
