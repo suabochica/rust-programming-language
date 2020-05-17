@@ -164,15 +164,112 @@ Let’s first look at how the dereference operator works with regular references
 > Note: There is one big difference betweent the `MyBox<T>` type we are about to built and the real `Box<T>`: our version will not store its data on the heap. We are focusing this example on `Deref`, so where the data is actually stored is less important than the pointer-like behavior.
 
 ### Following the Pointer to the Value with the Dereference Operator
+A regular reference is a type of pointer, and one way to think of a pointer is as an arrow to a value stored somewhere else. In the next snippet, we create a reference to an i32 value and then use the dereference operator to follow the reference to the data:
+
+```rs
+fn main() {
+   let x = 5;
+   let y = &x;
+   
+   assert_eq!(5, x);
+   assert_eq!(5, *y);
+}
+```
+
+The variable `x` holds an `i32` value, `5`. We set `y` equal to a reference to `x`. We can assert that `x` is equal to `5`. However, if we want to make an assertion about the value in `y`, we have to use `*y` to follow the reference to the value it’s pointing to (hence *dereference*). Once we dereference `y`, we have access to the integer value `y` is pointing to that we can compare with `5`.
+
+If we tried to write `assert_eq(5, y);` instead we get a compilation error. Comparing a number and a reference to a number isn’t allowed because they’re different types. We must use the dereference operator to follow the reference to the value it’s pointing to.
 
 ### Using Box Like a Reference
+We can rewrite the last snippet using `Box<T>` instead of a reference. The dereference operator will work as shown below:
+
+```rs
+fn main() {
+   let x = 5;
+   let y = Box::new(x);
+   
+   assert_eq!(5, x);
+   assert_eq!(5, *y);
+}
+```
+
+The only difference between the last two code sample is that here we set `y` to be an instance of a box pointing to the value in `x` rather than a reference pointing to the value of `x`. In the last assertion, we can use the dereference operator to follow the box’s pointer in the same way that we did when `y` was a reference. Next, we’ll explore what is special about `Box<T>` that enables us to use the dereference operator by defining our own box type.
+
 ### Defining Our Own Smart Pointer
+Let’s build a smart pointer similar to the `Box<T>` type provided by the standard library to experience how smart pointers behave differently from references by default. Then we’ll look at how to add the ability to use the dereference operator.
+
+The `Box<T>` type is ultimately defined as a tuple struct with one element, so the next implementation defines a `MyBox<`T> type in the same way. We’ll also define a new function to match the new function defined on `Box<T>`.
+
+```rs
+struct MyBox<T>(T);
+
+impl<T> MyBox<T> {
+    fn new(x: T) -> MyBox<T> {
+        MyBox(x)
+    }
+}
+```
+
+We define a struct named `MyBox` and declare a generic parameter `T`, because we want our type to hold values of any type. The `MyBox` type is a tuple struct with one element of type `T`. The `MyBox::new` function takes one parameter of type T and returns a `MyBox` instance that holds the value passed in.
+
+Let’s try adding the `main` function in the last codes and changing it to use the `MyBox<T>` type we’ve defined instead of `Box<T>`. The next code won’t compile because Rust doesn’t know how to dereference `MyBox`.
+
+
+```rs
+fn main() {
+   let x = 5;
+   let y = MyBox::new(x);
+   
+   assert_eq!(5, x);
+   assert_eq!(5, *y);
+}
+```
+
+Here is the resulting compilation error:
+
+```rs
+$ cargo run
+    Compiling deref-example v0.1.0 (file:///projects/deref-example)
+    error[E0614]: type `MyBox<{integer}>` cannot be dereferenced
+```
+
+Our `MyBox<T>` type can’t be dereferenced because we haven’t implemented that ability on our type. To enable dereferencing with the `*` operator, we implement the `Deref` trait.
+
 ### Treating a Type Like a Reference by Implementing the Deref Trait
+As discussed in Chapter 10, to implement a trait, we need to provide implementations for the trait’s required methods. The `Deref` trait, provided by the standard library, requires us to implement one method named `deref` that borrows self and returns a reference to the inner data. Next snippet contains an implementation of `Deref` to add to the definition of `MyBox`:
+
+```rs
+use std::ops::Deref;
+
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+    
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+```
+
+The type `Target = T;` syntax defines an associated type for the `Deref` trait to use. Associated types are a slightly different way of declaring a generic parameter, but you don’t need to worry about them for now; we’ll cover them in more detail in Chapter 19.
+
+We fill in the body of the `deref` method with `&self.0` so `deref` returns a reference to the value we want to access with the `*` operator. The `main` function that calls `*` on the `MyBox<T>` value now compiles, and the assertions pass!
+
+Without the `Deref` trait, the compiler can only dereference `&` references. The `deref` method gives the compiler the ability to take a value of any type that implements `Deref` and call the `deref` method to get a `&` reference that it knows how to dereference.
+
+When we entered `*y` in main function that use the MyBox, behind the scenes Rust actually ran this code:
+
+```
+*(y.deref())
+```
+
+Rust substitutes the `*` operator with a call to the `deref` method and then a plain dereference so we don’t have to think about whether or not we need to call the `deref` method. This Rust feature lets us write code that functions identically whether we have a regular reference or a type that implements `Deref`.
+
+The reason the `deref` method returns a reference to a value, and that the plain dereference outside the parentheses in `*(y.deref())` is still necessary, is the ownership system. If the `deref` method returned the value directly instead of a reference to the value, the value would be moved out of self. We don’t want to take ownership of the inner value inside `MyBox<T>` in this case or in most cases where we use the dereference operator.
+
+Note that the `*` operator is replaced with a call to the `deref` method and then a call to the `*` operator just once, each time we use a `*` in our code. Because the substitution of the `*` operator does not recurse infinitely, we end up with data of type `i32`, which matches the `5` in `assert_eq!` in the main function that use our `MyBox` implementation
+
 ### Implicit Deref Coercions with Function and Methods
 ### How Deref Coercion Interacts with Mutability
-
-
-
 
 ## 3. Running Code on Cleanup with the Drop Trait
 ## 4. Rc, the Reference Counted Smart Pointer
