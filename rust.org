@@ -43,8 +43,10 @@
    CLOSED: [2020-05-14 Thu 07:39]
 * Chapter 15: Smart Pointers
   DEADLINE: <2020-05-20 Wed>
-** TODO Using Box to Point to Data on the Heap
-** TODO Treating Smart Pointers Like Regular References
+** DONE Using Box to Point to Data on the Heap
+   CLOSED: [2020-05-16 Sat 07:57]
+** DONE Treating Smart Pointers Like Regular References
+   CLOSED: [2020-05-18 Mon 07:57]
 ** TODO Running Code on Cleanup
 ** TODO The Reference Counted Smart Pointer
 ** TODO References Cycles can Leak Memory
