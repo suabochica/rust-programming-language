@@ -47,6 +47,7 @@
    CLOSED: [2020-05-16 Sat 07:57]
 ** DONE Treating Smart Pointers Like Regular References
    CLOSED: [2020-05-18 Mon 07:57]
-** TODO Running Code on Cleanup
+** DONE Running Code on Cleanup
+   CLOSED: [2020-05-19 Tue 08:05]
 ** TODO The Reference Counted Smart Pointer
 ** TODO References Cycles can Leak Memory
