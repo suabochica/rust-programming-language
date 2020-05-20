@@ -49,5 +49,7 @@
    CLOSED: [2020-05-18 Mon 07:57]
 ** DONE Running Code on Cleanup
    CLOSED: [2020-05-19 Tue 08:05]
-** TODO The Reference Counted Smart Pointer
+** DONE Rc, The Reference Counted Smart Pointer
+   CLOSED: [2020-05-20 Wed 08:05]
+** TODO RefCell and the Interior Mutability Pattern
 ** TODO References Cycles can Leak Memory
