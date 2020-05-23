@@ -12,6 +12,7 @@ projects/add/target/*
 projects/minigrep/target/*
 projects/minigrep_clo_iter/target/*
 projects/custom_crate/target/*
+projects/cons_list/target/*
 projects/smart_pointers/target/*
 
 **/.DS_Store
