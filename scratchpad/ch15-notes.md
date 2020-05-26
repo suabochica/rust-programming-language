@@ -842,7 +842,6 @@ fn main() {
 }
 ```
 
-
 We create a value that is an instance of `Rc<RefCell<i32>>` and store it in a variable named value so we can access it directly later. Then we create a `List` in a with a `Cons` variant that holds value. We need to clone value so both a and value have ownership of the inner `5` value rather than transferring ownership from value to a or having a borrow from value.
 
 We wrap the list a in an `Rc<T>` so when we create lists `b` and `c`, they can both refer to `a`, which is what we did before.
@@ -866,3 +865,106 @@ This technique is pretty neat! By using `RefCell<T>`, we have an outwardly immut
 The standard library has other types that provide interior mutability, such as `Cell<T>`, which is similar except that instead of giving references to the inner value, the value is copied in and out of the `Cell<T>`. There’s also `Mutex<T>`, which offers interior mutability that’s safe to use across threads; we’ll discuss its use in Chapter 16. Check out the standard library docs for more details on the differences between these types.
 
 ## 6. Reference Cycles Can Leak Memory
+
+Rust’s memory safety guarantees make it difficult, but not impossible, to accidentally create memory that is never cleaned up (known as a *memory leak*). Preventing memory leaks entirely is not one of Rust’s guarantees in the same way that disallowing data races at compile time is, meaning memory leaks are memory safe in Rust. We can see that Rust allows memory leaks by using `Rc<T>` and `RefCell<T>`: it’s possible to create references where items refer to each other in a cycle. This creates memory leaks because the reference count of each item in the cycle will never reach 0, and the values will never be dropped.
+
+### Creating a Reference Cycle
+
+Let's look at how a reference cycle might happen and how to prevent it, starting with the definition of the `List` enum and a `tail` method in the next snippet:
+
+```rs
+use crate::List::{Cons, Nil};
+use std::cell::RefCell;
+use std::rc::Rc;
+
+#[derive(Debug)]
+enum List {
+    Cons(i32, RefCell<Rc<List>>),
+    Nil,
+}
+
+impl List {
+    fn tail(&self) -> Option<&RefCell<Rc<List>>> {
+        match self {
+            Cons(_, item) => Some(item),
+            Nil => None,
+        }
+    }
+}
+
+fn main() {}
+```
+
+Here, we’re using another variation of the `List` definition. The second element in the `Cons` variant is now `RefCell<Rc<List>>`, meaning that instead of having the ability to modify the i32 value as we did before, we want to modify which `List` value a `Cons` variant is pointing to. We’re also adding a `tail` method to make it convenient for us to access the second item if we have a `Cons` variant.
+
+In the `main` function we will use the definitions of our `List` Implementation. The next code creates a list in `a` and a list in `b` that points to the list in `a`. Then it modifies the list in `a` to point to `b`, creating a reference cycle. There are `println!` statements along the way to show what the reference counts are at various points in this process.
+
+```rs
+fn main() {
+    let a = Rc::new(Cons(5, RefCell::new(Rc::new(Nil))));
+
+    println!("a initial rc count = {}", Rc::strong_count(&a));
+    println!("a next item = {:?}", a.tail());
+
+    let b = Rc::new(Cons(10, RefCell::new(Rc::clone(&a))));
+
+    println!("a rc count after b creation = {}", Rc::strong_count(&a));
+    println!("b initial rc count = {}", Rc::strong_count(&b));
+    println!("b next item = {:?}", b.tail());
+
+    if let Some(link) = a.tail() {
+        *link.borrow_mut() = Rc::clone(&b);
+    }
+
+    println!("b rc count after changing a = {}", Rc::strong_count(&b));
+    println!("a rc count after changing b = {}", Rc::strong_count(&a));
+
+    // Uncomment the next line to see that we have a cycle;
+    // it will overflow the stack
+    // println!("a next item = {:?}", a.tail());
+}
+```
+
+We create an `Rc<List>` instance holding a `List` value in the variable `a` with an initial list of 5, `Nil`. We then create an `Rc<List>` instance holding another `List` value in the variable `b` that contains the value 10 and points to the list in `a`.
+
+We modify `a` so it points to `b` instead of `Nil`, creating a cycle. We do that by using the `tail` method to get a reference to the `RefCell<Rc<List>>` in a, which we put in the variable link. Then we use the `borrow_mut` method on the `RefCell<Rc<List>>` to change the value inside from an `Rc<List>` that holds a `Nil` value to the `Rc<List>` in `b`.
+
+When we run this code, keeping the last `println!` commented out for the moment, we’ll get this output:
+
+```
+❯ cargo run
+   Compiling cons_list v0.1.0 (projects/cons_list)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.82s
+     Running `target/debug/cons_list`
+a initial rc count = 1
+a next item = Some(RefCell { value: Nil })
+a rc count after b creation = 2
+b initial rc count = 1
+b next item = Some(RefCell { value: Cons(5, RefCell { value: Nil }) })
+b rc count after changing a = 2
+a rc count after changing b = 2
+```
+
+The reference count of the `Rc<List>` instances in both `a` and `b` are 2 after we change the list in `a` to point to `b`. At the end of main, Rust will try to drop `b` first, which will decrease the count of the `Rc<List>` instance in `b` by 1.
+
+However, because a is still referencing the `Rc<List>` that was in `b`, that `Rc<List>` has a count of 1 rather than 0, so the memory the `Rc<List>` has on the heap won’t be dropped. The memory will just sit there with a count of 1, forever. To visualize this reference cycle, we’ve created the next diagram.
+
+![image](../assets/15-06_reference_cycle.svg)
+
+If you uncomment the last `println!` and run the program, Rust will try to print this cycle with `a` pointing to `b` pointing to `a` and so forth until it overflows the stack.
+
+In this case, right after we create the reference cycle, the program ends. The consequences of this cycle aren’t very dire. However, if a more complex program allocated lots of memory in a cycle and held onto it for a long time, the program would use more memory than it needed and might overwhelm the system, causing it to run out of available memory.
+
+Creating reference cycles is not easily done, but it’s not impossible either. If you have `RefCell<T>` values that contain `Rc<T>` values or similar nested combinations of types with interior mutability and reference counting, you must ensure that you don’t create cycles; you can’t rely on Rust to catch them. Creating a reference cycle would be a logic bug in your program that you should use automated tests, code reviews, and other software development practices to minimize.
+
+Another solution for avoiding reference cycles is reorganizing your data structures so that some references express ownership and some references don’t. As a result, you can have cycles made up of some ownership relationships and some non-ownership relationships, and only the ownership relationships affect whether or not a value can be dropped. In the previous example, we always want `Cons` variants to own their list, so reorganizing the data structure isn’t possible. Let’s look at an example using graphs made up of parent nodes and child nodes to see when non-ownership relationships are an appropriate way to prevent reference cycles.
+
+### Preventing Reference Cycles
+
+#### Creating a Tree Data Structure
+
+#### Adding a Reference from a Child to Its Parent
+
+#### Visualizing Changes to Strong Count and Weak Count
+
+## Summary
