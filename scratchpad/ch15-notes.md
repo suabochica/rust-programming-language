@@ -961,9 +961,112 @@ Another solution for avoiding reference cycles is reorganizing your data structu
 
 ### Preventing Reference Cycles
 
+So far, we’ve demonstrated that calling `Rc::clone` increases the `strong_count` of an `Rc<T>` instance, and an `Rc<T>` instance is only cleaned up if its `strong_count` is 0. You can also create a weak reference to the value within an `Rc<T>` instance by calling `Rc::downgrade` and passing a reference to the `Rc<T>`. When you call `Rc::downgrade`, you get a smart pointer of type `Weak<T>`. Instead of increasing the `strong_count` in the `Rc<T>` instance by 1, calling `Rc::downgrade` increases the `weak_count` by 1. The `Rc<T>` type uses `weak_count` to keep track of how many `Weak<T>` references exist, similar to `strong_count`. The difference is the `weak_count` doesn’t need to be 0 for the `Rc<T>` instance to be cleaned up.
+
+Strong references are how you can share ownership of an `Rc<T>` instance. Weak references don’t express an ownership relationship. They won’t cause a reference cycle because any cycle involving some weak references will be broken once the strong reference count of values involved is 0.
+
+Because the value that `Weak<T>` references might have been dropped, to do anything with the value that a `Weak<T>` is pointing to, you must make sure the value still exists. Do this by calling the upgrade method on a `Weak<T>` instance, which will return an `Option<Rc<T>>`. You’ll get a result of `Some` if the `Rc<T>` value has not been dropped yet and a result of `None` if the `Rc<T>` value has been dropped. Because upgrade returns an `Option<Rc<T>>`, Rust will ensure that the `Some` case and the `None` case are handled, and there won’t be an invalid pointer.
+
+As an example, rather than using a list whose items know only about the next item, we’ll create a tree whose items know about their children items and their parent items.
+
 #### Creating a Tree Data Structure
 
+To start, we’ll build a tree with nodes that know about their child nodes. We’ll create a struct named Node that holds its own `i32` value as well as references to its children `Node` values:
+
+```rs
+use std::cell:RefCell;
+use std::rc::Rc;
+
+#[derive(Debug)]
+struct Node {
+    values: 132,
+    children: RefCell<Vec<Rc<Node>>>,
+}
+```
+
+We want a `Node` to own its children, and we want to share that ownership with variables so we can access each Node in the tree directly. To do this, we define the `Vec<T>` items to be values of type `Rc<Node>`. We also want to modify which nodes are children of another node, so we have a `RefCell<T>` in children around the `Vec<Rc<Node>>`.
+
+Next, we’ll use our struct definition and create one Node instance named leaf with the value 3 and no children, and another instance named branch with the value 5 and leaf as one of its children, as shown below:
+
+```rs
+fn main() {
+    let leaf = Rc::new(Node {
+        value: 3,
+        children: RefCell::new(vec![]),
+    });
+    
+    let branch = Rc::new(Node {
+        value = 5,
+        children: RefCell(vec![Rc::clone(&leaf)]),
+    })
+}
+```
+
+We clone the `Rc<Node>` in `leaf` and store that in `branch`, meaning the `Node` in `leaf` now has two owners: `leaf` and `branch`. We can get from `branch` to `leaf` through `branch.children`, but there’s no way to get from `leaf` to `branch`. The reason is that `leaf` has no reference to `branch` and doesn’t know they’re related. We want `leaf` to know that `branch` is its parent. We’ll do that next.
+
 #### Adding a Reference from a Child to Its Parent
+
+To make the child node aware of its parent, we need to add a parent field to our `Node` struct definition. The trouble is in deciding what the type of parent should be. We know it can’t contain an `Rc<T>`, because that would create a reference cycle with `leaf.parent` pointing to `branch` and `branch.children` pointing to `leaf`, which would cause their `strong_count` values to never be 0.
+
+Thinking about the relationships another way, a parent node should own its children: if a parent node is dropped, its child nodes should be dropped as well. However, a child should not own its parent: if we drop a child node, the parent should still exist. This is a case for weak references!
+
+So instead of `Rc<T>`, we’ll make the type of parent use `Weak<T>`, specifically a `RefCell<Weak<Node>>`. Now our `Node` struct definition looks like this:
+
+```rs
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
+
+#[derive(Debug)]
+struct Node {
+    value: i32,
+    parent: RefCell<Weak<Node>>,
+    children: RefCell<Vec<Rc<Node>>>,
+}
+```
+
+A node will be able to refer to its parent node but doesn’t own its parent, Let's now update the `main` to use this new definition so the `leaf` node will have a way to refer to its parent, `branch`:
+
+```rs
+fn main() {
+    let leaf = Rc::new(Node {
+        value: 3,
+        parent: RefCell::new(Weak::new()),
+        children: RefCell::new(vec![]),
+    });
+    
+    println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+    
+    let branch = Rc::new(Node {
+        value: 5,
+        parent: RefCell::new(Waek::new()),
+        children: RefCell::new(vec![Rc::clone(&leaf)]),
+    });
+    
+    *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
+    
+    println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+}
+```
+
+Creating the `leaf` node looks similar to how creating the `leaf` node looked in our last version with the exception of the `parent` field: `leaf` starts out without a parent, so we create a new, empty `Weak<Node>` reference instance.
+
+At this point, when we try to get a reference to the parent of `leaf` by using the `upgrade` method, we get a `None` value. We see this in the output from the first `println!` statement:
+
+```
+leaf parent = None
+```
+
+When we create the `branch` node, it will also have a new `Weak<Node>` reference in the `parent` field, because `branch` doesn’t have a parent node. We still have `leaf` as one of the children of `branch`. Once we have the `Node` instance in `branch`, we can modify `leaf` to give it a `Weak<Node>` reference to its parent. We use the `borrow_mut` method on the `RefCell<Weak<Node>>` in the parent field of `leaf`, and then we use the `Rc::downgrade` function to create a `Weak<Node>` reference to branch from the `Rc<Node>` in branch.
+
+When we print the parent of `leaf` again, this time we’ll get a `Some` variant holding branch: now `leaf` can access its parent! When we print `leaf`, we also avoid the cycle that eventually ended in a stack overflow; The `Weak<Node>` references are printed as `(Weak)`:
+
+```
+leaf parent = Some(Node { value: 5, parent: RefCell { value: (Weak) },
+children: RefCell { value: [Node { value: 3, parent: RefCell { value: (Weak) },
+children: RefCell { value: [] } }] } })
+```
+
+The lack of infinite output indicates that this code didn’t create a reference cycle. We can also tell this by looking at the values we get from calling `Rc::strong_count` and `Rc::weak_count`.
 
 #### Visualizing Changes to Strong Count and Weak Count
 
