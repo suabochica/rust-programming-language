@@ -1070,4 +1070,72 @@ The lack of infinite output indicates that this code didn’t create a reference
 
 #### Visualizing Changes to Strong Count and Weak Count
 
+Let’s look at how the `strong_count` and `weak_count` values of the `Rc<Node>` instances change by creating a new inner scope and moving the creation of branch into that scope. By doing so, we can see what happens when branch is created and then dropped when it goes out of scope. The modifications are shown below:
+
+```rs
+fn main() {
+    let leaf = Rc::new(Node {
+        value: 3,
+        parent: RefCell::new(Weak::new()),
+        children: RefCell::new(vec![]),
+    });
+    
+    println!(
+        "leaf strong = {}, weak = {}",
+        Rc::strong_count(&leaf),
+        Rc::weak_count(&leaf),
+    );
+    
+    {
+      let branch = Rc::new(Node {
+          value: 5,
+          parent: RefCell::new(Waek::new()),
+          children: RefCell::new(vec![Rc::clone(&leaf)]),
+      });
+
+      *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
+
+      println!(
+          "leaf strong = {}, weak = {}",
+          Rc::strong_count(&leaf),
+          Rc::weak_count(&leaf),
+      );
+    }
+    
+    println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+
+      println!(
+          "leaf strong = {}, weak = {}",
+          Rc::strong_count(&leaf),
+          Rc::weak_count(&leaf),
+      );
+}
+```
+
+This code will print:
+
+```
+leaf strong = 1, weak = 0
+branch strong = 1, weak = 1
+leaf strong = 2, weak = 0
+leaf parent = None
+leaf strong = 1, weak = 0
+```
+
+After leaf is created, its `Rc<Node>` has a strong count of 1 and a weak count of 0. In the inner scope, we create `branch` and associate it with `leaf`, at which point when we print the counts, the `Rc<Node>` in `branch` will have a strong count of 1 and a weak count of 1 (for `leaf.parent` pointing to branch with a `Weak<Node>`). When we print the counts in `leaf`, we’ll see it will have a strong count of 2, because branch now has a clone of the `Rc<Node>` of leaf stored in `branch.children`, but will still have a weak count of 0.
+
+When the inner scope ends, `branch` goes out of scope and the strong count of the `Rc<Node>` decreases to 0, so its `Node` is dropped. The weak count of 1 from `leaf.parent` has no bearing on whether or not `Node` is dropped, so we don’t get any memory leaks!
+
+If we try to access the parent of `leaf` after the end of the scope, we’ll get `None` again. At the end of the program, the `Rc<Node>` in `leaf` has a strong count of 1 and a weak count of 0, because the variable `leaf` is now the only reference to the `Rc<Node>` again.
+
+All of the logic that manages the counts and value dropping is built into `Rc<T>` and `Weak<T>` and their implementations of the `Drop` trait. By specifying that the relationship from a child to its parent should be a `Weak<T>` reference in the definition of `Node`, you’re able to have parent nodes point to child nodes and vice versa without creating a reference cycle and memory leaks.
+
 ## Summary
+
+This chapter covered how to use smart pointers to make different guarantees and trade-offs from those Rust makes by default with regular references. The `Box<T>` type has a known size and points to data allocated on the heap. The `Rc<T>` type keeps track of the number of references to data on the heap so that data can have multiple owners. The `RefCell<T>` type with its interior mutability gives us a type that we can use when we need an immutable type but need to change an inner value of that type; it also enforces the borrowing rules at runtime instead of at compile time.
+
+Also discussed were the `Deref` and `Drop` traits, which enable a lot of the functionality of smart pointers. We explored reference cycles that can cause memory leaks and how to prevent them using `Weak<T>`.
+
+If this chapter has piqued your interest and you want to implement your own smart pointers, check out “[The Rustonomicon](https://doc.rust-lang.org/nomicon/index.html)” for more useful information.
+
+Next, we’ll talk about concurrency in Rust. You’ll even learn about a few new smart pointers.

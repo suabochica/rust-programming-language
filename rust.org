@@ -53,4 +53,5 @@
    CLOSED: [2020-05-20 Wed 08:05]
 ** DONE RefCell and the Interior Mutability Pattern
    CLOSED: [2020-05-22 Fri 08:23]
-** TODO References Cycles can Leak Memory
+** DONE References Cycles can Leak Memory
+   CLOSED: [2020-05-28 Thu 08:20]
