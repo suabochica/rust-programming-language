@@ -167,6 +167,7 @@ When you are writing a program, if you do not know the exhaustive set of types t
 Now that we have discussed some of the most common ways to use vectors, be sure to review API documentation for all the many useful methods defined on `Vec<T>` by the standard library. For example, in addition to `push`, a `pop` method removes and return the last element. Let's move on the next collection type: `String`.
 
 ## 2. Storing UTF-8 Encoded Text with Strings
+
 New Rustaceans commonly get stuck on strings for a combination of three reasons:
 
 1. Rust's propensity for exposing possible errors.
@@ -178,6 +179,7 @@ These factors combine in a way that can seem difficult when you are coming from 
 It is useful to discuss strings in the context of collections because strings are implemented as a collection of bytes, plus some methods to provide useful functionality when those btes are interpreted as text. In this section, we will talk about the operations on `String` that every collection type has, such as creating, updating, and reading. We will also discuss the rays which `String` is differento from other collections, namely how indexing into a `String` is complicated by the differences between how people and computers interpret `String` data.
 
 ### What is a String?
+
 Rust has only one string type in the core language, which is the string slice `str` that is usually seen in its borrowed from `&str`. We talked about _string slices_ which are references to some UTF-8 encoded string data stores elsewhere. String literals, for example, are stored in the program's binary and are therefore string slices.
 
 The `String` type, which is provided by Rust's standard library rather than code into the core language, is a growable, mutable, owned, UTF-8 encoded string type. When Rustaceans refers to strings in Rust, they usually mean The `String` and the string slice `&str` types, not just one of those types. Although this section is largely about `String`, both types are used heavily in Rust's standard library, and both `String` and string slices are UTF-8 encoded.
@@ -185,6 +187,7 @@ The `String` type, which is provided by Rust's standard library rather than code
 Rust's standard library also includes a number of other string types. Library crates can provide even more options for storing string data. They refer to owned and borrowed variants, just like the `String` and `str` types you have seen previously. These string types can store text in different encodings or be represented in memory in a different way, for example. We won't discuss these other string types in this chapte, see their API documentation for more about how to use them and when eac is appropiate.
 
 ### Creating a New String
+
 Many of the same operations available with `Vec<T>` are available with `String` as well, starting with the `new` function to create a string, shown below.
 
 ```rust
@@ -231,9 +234,11 @@ let hello = String::from("Hola");
  All of these are valid `String` values.
 
 ### Updating a String
+
 A `String` can grow in size an its content can change, just like contents of `Vect<T>`, if you push more data into it. In addition, you can conveniently use the `+` operator or the `format!` macro to concatenate `String` values
 
 #### Appending to a String
+
 We can grow a `String` by using the `push_str` method to append string slice, as shown next:
 
 ```rust
@@ -263,6 +268,7 @@ s.push('l');
 As a result of this code, `s` will contain `lol`.
 
 #### Concatenation
+
 Often, you will want to combine two existing strings. One way is to use the `+` operator, as shown below.
 
 ```rust
@@ -308,6 +314,7 @@ let s = format!("{}-{}-{}", s1, s2, s3);
 This code also sets `s` to `tic-tac-toe`. the `format!` macro works in the same way as `println!`, but instead of printing the output to the screen, it returns a `String` with the contents. The version of the code using `format!` is much easier to read and does not take ownership of any of its parameters.
 
 ### Indexing into String
+
 In many programming languages, accessing to individual characters in a string by referencing the by index is a valid and common operation. However, if you try to access parts of a `String` using indexing syntax in Rust you will get an error.
 
 ```rust
@@ -330,6 +337,7 @@ error[E0277]: the trait bound `std::string::String: std::ops::Index<{integer}>` 
 The error and the note tell the story: Rust string do not support indexing. Why not? To answer that question we need to discuss how Rust stores strings in memory.
 
 #### Internal Representation
+
 A `String` is a wrapper over a `Vec<u8>`. Let's look at some of our properly encoded UTF-8 examples string from the list that we discuss before:
 
 ```rust
@@ -352,6 +360,7 @@ let answer = &hello[0];
 What should the values of `answer` be? When encoded in UTF-8, the first byte of `З` is 208 and the second is 151, so `answer` should in the fact be 208, bat 208 is not a valid character on its own. Returning 208 is likely not what a user would want if they asked for the first letter of this string. However, that is the only data that Rust has at byte index 0. Users generally do not want the byte returned, even if the string contains only Latin letters. If `&"hello"[0]` were valid code that returned the byte value, it would return 104, not `h`. To avoid returning an unexpected values and causing bugs that might not be sicovered immediately, Rust does not compile this code at all and prevents misunderstandings early in the development process.
 
 #### Bytes, Scalar Values and Grapheme Clusters
+
 Another poing about UTF-8 is that there are actually three relevant ways to look at strings from Rust's perspective:
 
 1. Bytes
@@ -382,6 +391,7 @@ Rust provides different ways of interpreting the raw string data that computers 
 A final reason Rust does not allow us to index into a `String` to get a character is that indexing operations are expected to always takes constatn time `0(1)`. But it is not possible to guarantee that performance with a `String`, because Rust would have to walk through the contents from the beginning to the index to determine how many valid characters there were.
 
 ### Slicing String
+
 Indexing into a string is often a bad idea because it is not clear what the return type of the string-indexing operation should be: a byte value, a character, a grapheme cluster, or a string slice. Therefore, Rust asks you to be more specific if you really need to use indices to create string slices. To be more specific, in your indexing and indicate that you want a string slice, rather that indexing using `[]` with a single number, you can use `[]` with a range to create a string slice containing particular bytes:
 
 ```rust
@@ -443,11 +453,13 @@ But be sure to remember that valid Unicode scalar values may be made up of more 
 Getting grapheme clusters from strings is complex, so this functionality is not provided by the standard library. Crates are availabe on crate.io if this is the functionality you need.
 
 ### String are not Simple
+
 To summarize, strings are complicated. Different programming languages make different choices about how to present this complexity to the programmer. Rust has chosen to make the correct handling of `String` data the default behavior for all Rust programs, which means programmers have to put more thought into handling UTF-8 data upfront. This trade-off exposes more of the complexity of strings that is apparent in other programming languages, but it prevents you from having to handle errors involving non-ASCII characters later in your development life cycle.
 
 Let's swith to something a bit less complex: Hash maps.
 
 ## 3. Storing Keys with Associated Values in Hash Map
+
 The last of our common collections is the _hash map_. The type `HashMap<K, V>` stores a mapping of keys of type `K` to values of type `V`, It does this via a _hashing function_ which determine how it places these keys an values into memory. Many programming languages support this kind of data structure, but they often use a different name, such as hash, map, object, hash table, dictionary, or associative array, just to name a few.
 
 Hash maps are useful when you want to look up data not by using and index, as you can with vectors, but by using a key that can be of any type. For example, in a game, you could keep track of each team's score in a hash map in which each key is a team's name and the value are each team's score. Give a team name, you can retrieve its score.
@@ -539,6 +551,7 @@ Blue: 10,
 ```
 
 ### Updating a Hash Map
+
 Although the number of keys and values is growable, each key can only have one value associated with it at a time. When you want to change the data in a hash map, you have to decide how to handle the case when a key already has a value assigned. You could replace the old value with the new value, completely disregarding the old value. You could keep the old value and ignore the new value, only adding the new value if the key _does not_ already have a value. Or you could combine the old value and the new value. Let's look at how to do each of these.
 
 #### Overwriting a Value
@@ -558,6 +571,7 @@ println!("{:>}", scores)
 This code will print `{"Blue": 25}`. The original value of `10` has been overwritten.
 
 #### Only Inserting a Value if the Key Has No Value
+
 It is common to check whether a particular key has a value and, if it does not, insert a value for it. Hash map have a special API for this called `entry` that takes the key you want to check as a parameter. The return values of the `entry` method is an enum called `Entry` that represents a value that might or might not exist. Let's say we want to check whether the key for the Yellow team has a value associated with it. If it does not, we want to insert the value 50, and the same for the Blue team. Using the `entry` API, the code look like:
 
 ```rust
@@ -577,6 +591,7 @@ The `or_insert` method on `Entry` is defined to return a mutable reference to th
 Running the code in Listing 8-25 will print `{"Yellow": 50, "Blue": 10}`. The first call to `entry` will insert the key for the Yellow team with the value 50 because the Yellow team does not have a value already. The second call to `entry` will not change the hash map because the Blue team already has the value 10.
 
 #### Updating a Value Based on the Old Value
+
 Another common use case for hash maps is to look up a key's value and then update it based on the old value. For instance, the next snippet shows code that counts how many times each word appears in some text. We use a has map with the words as keys and icrement the value to keep track of how many times we have seen that word. If it is the first time we have seen a word, we will first insert the value 0.
 
 ```js
@@ -596,12 +611,15 @@ println!("{:?}", map);
 This code will print `{"world": 2, "hello": 1, "wonderful": 1}`. The `or_insert` method actually returns a mutable reference (`&mut V`) to the value for this key. Here we store that mutable reference in the `count` variable, so in order to assign to that value, we must first dereference `count` using the asterisk (`*`). The mutable reference goes out of scope at the end of the `for` loop, so all of these changes are safe and allowed by the borrowing rules.
 
 ### Hashing Functions
+
 By default, `HashMap` uses a "cryptographically strong" hashing function that can provide resistance to Denial od Service (DoS) attacks. This is not the fastest hashing algorithm available, but the trade-off for better security that come with the drop in performance is worth it. If you profile your code and find that the default hash function is too slow for your purposes, you can switch to another function by specifying a different _hasher_. A hasher is a type that implements the `BuildHasher` trait. We will talk about traits and how to implement them in chapter 10. You do not necessarily have to implement your own hasher from scratch. Crates.io has libraries shared by other Rust users that provide hashers implementing many common hashing algorithms.
 
 ### Links
+
 + [SipHash](https://www.131002.net/siphash/siphash.pdf)
 
 ### Summary
+
 Vectors, strings, and hash maps will provide a large amount of functionality necessary in programs when you need to store, access, and modify data. Here are some exercises you should now be equipped to solve.
 
 + Given a list of integers, use a vector and return the mean, median, and mode of the list.

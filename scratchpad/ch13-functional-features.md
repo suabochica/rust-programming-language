@@ -19,7 +19,7 @@ Other Rust features, such as pattern matching and enums, which we’ve covered i
 3. Improving our I/O Project
 4. Comparing Performance: Loops vs Iterators
 
-## Closures: Anonymous functions that can capture their environment ##
+## 1. Closures: Anonymous functions that can capture their environment ##
 Rust’s closures are anonymous functions you can save in a variable or pass as arguments to other functions. You can create the closure in one place and then call the closure to evaluate it in a different context. Unlike functions, closures can capture values from the scope in which they’re defined. We’ll demonstrate how these closure features allow for code reuse and behavior customization.
 
 ### Creating an Abstraction Behavior with Closures ###
@@ -29,7 +29,7 @@ Consider this hypothetical situation: we work at a startup that’s making an ap
 
 We’ll simulate calling this hypothetical algorithm with the function `simulated_expensive_calculation` shown below, which will print `calculating slowly...`, wait for two seconds, and then return whatever number we passed in.
 
-```rs
+```rust
 use std::thread;
 use std::time::Duration;
 
@@ -50,7 +50,7 @@ The required inputs are these:
 
 The output will be the recommended workout plan.
 
-```rs
+```rust
 fn main() {
     let simulated_user_specified_value = 10;
     let simulated_random_number = 7;
@@ -67,7 +67,7 @@ We’ve hardcoded the variable `simulated_user_specified_value` as 10 and the va
 Now that we have the context, let’s get to the algorithm. The function `generate_workout` contains the business logic of the app that we’re most concerned with in this example. The rest of the code changes in this example will be made to this function.
 
 
-```rs
+```rust
 fn generate_workout(intensity: u32, random_number: u32) {
     if intensity < 25 {
         println!(
@@ -104,7 +104,7 @@ This code works the way the business wants it to now, but let’s say the data s
 #### Refactoring Using Functions ####
 We could restructure the workout program in many ways. First, we’ll try extracting the duplicated call to the `simulated_expensive_calculation` function into a variable, as shown next.
 
-```rs
+```rust
 fn generate_workout(intensity: u32, random_number: u32) {
     let expensive_result = simulated_expensive_calculation(intensity)
     if intensity < 25 {
@@ -136,7 +136,7 @@ We want to define code in one place in our program, but only *execute* that code
 #### Refactoring with Closures to Store Code ####
 Instead of always calling the `simulated_expensive_calculation` function before the if blocks, we can define a closure and store the closure in a variable rather than storing the result of the function call, as shown in the next snippet. We can actually move the whole body of `simulated_expensive_calculation` within the closure we’re introducing here.
 
-```rs
+```rust
 let expensive_closure = |num| {
     println!(calculating slowly...);
     thread::sleep(Duration::from_secs(2));
@@ -153,7 +153,7 @@ Note that this let statement means `expensive_closure` contains the definition o
 
 With the closure defined, we can change the code in the if blocks to call the closure to execute the code and get the resulting value. We call a closure like we do a function: we specify the variable name that holds the closure definition and follow it with parentheses containing the argument values we want to use, as shown below:
 
-```rs
+```rust
 fn generate_workout(intensity: u32, random_number: u32) {
     let expensive_closure = |num| {
         println!(calculating slowly...);
@@ -196,7 +196,7 @@ Making programmers annotate the types in these small, anonymous functions would 
 
 As with variables, we can add type annotations if we want to increase explicitness and clarity at the cost of being more verbose than is strictly necessary. Annotating the types for the closure we defined before would look like:
 
-```rs
+```rust
 let expensive_closure = |num: u32| -> u32 {
     println!("calculating slowly...");
     thread::sleep(Duration:from_secs(2));
@@ -206,7 +206,7 @@ let expensive_closure = |num: u32| -> u32 {
 
 With type annotations added, the syntax of closures looks more similar to the syntax of functions. The following is a vertical comparison of the syntax for the definition of a function that adds 1 to its parameter and a closure that has the same behavior. We’ve added some spaces to line up the relevant parts. This illustrates how closure syntax is similar to function syntax except for the use of pipes and the amount of syntax that is optional:
 
-```rs
+```rust
 fn  add_one_v1   (x: u32) -> u32 { x + 1 }  // function
 let add_one_v2 = |x: u32| -> u32 { x + 1 }; // closure
 let add_one_v3 = |x|             { x + 1 }; // closure
@@ -217,7 +217,7 @@ The first line shows a function definition, and the second line shows a fully an
 
 Closure definitions will have one concrete type inferred for each of their parameters and for their return value. For instance, the last definition of a short closure that just returns the value it receives as a parameter. This closure isn’t very useful except for the purposes of this example. Note that we haven’t added any type annotations to the definition: if we then try to call the closure twice, using a `String` as an argument the first time and a `u32` the second time, we’ll get an error.
 
-```rs
+```rust
 let example_closure = |x| x;
 
 let s = example_closure(String::from("hello"));
@@ -226,7 +226,7 @@ let n = example_closure(5);
 
 The compiler give us this error:
 
-```rs
+```rust
 error[E0308]: mismatched types
  = note: expected type `std::string::String`
          found type `{integer}`
@@ -247,7 +247,7 @@ We add types to the `Fn` trait bound to represent the types of the parameters an
 
 Next code shows the definition of `Cacher` struct that holds a closure and optional result value:
 
-```rs
+```rust
 
 #![allow(unused_variables)]
 fn main() {
@@ -269,7 +269,7 @@ The value field is of type `Option<u32>`. Before we execute the closure, value w
 
 The logic around the value field we’ve just described is defined below:
 
-```rs
+```rust
 
 impl<T> Cacher<T>
     where T: Fn(u32) -> u32
@@ -304,7 +304,7 @@ If `self.value` is `None`, the code calls the closure stored in `self.calculatio
 
 Time to use the `Cacher` struct in our `generate_workout` function:
 
-```rs
+```rust
 fn generate_workout(intensity: u32, random_number: u32) {
     let expensive_result = Cacher::new(|num| {
         println!(calculating slowly...);
@@ -346,7 +346,7 @@ The first problem is that a `Cacher` instance assumes it will always get the sam
 
 This code panics!
 
-```rs
+```rust
 #[test]
 fn call_with_different_values() {
     let mut c = Cacher::new(|a| a);
@@ -380,7 +380,7 @@ In the workout generator example, we only used closures as inline anonymous func
 
 The next example of a closure stored in the `equal_to_x` variable that uses the `x` variable from the closure’s surrounding environment.
 
-```rs
+```rust
 fn main () {
     let x = 4;
     let equat_to_x = |z| z == x;
@@ -394,7 +394,7 @@ Here, even though `x` is no one of the parameters of `equal_to_x`, the `equal_to
 
 We cannot do the same with functions. If we try with the following example, our code won't compile.
 
-```rs
+```rust
 fn main () {
     let x = 4;
     fn equat_to_x(z: i32) -> bool { z == x; }
@@ -431,7 +431,7 @@ If you want to force the closure to take ownership of the values it uses in the 
 
 We’ll have more examples of `move` closures in Chapter 16 when we talk about concurrency. For now, here’s the code with the move keyword added to the closure definition and using vectors instead of integers, because integers can be copied rather than moved; note that this code will not yet compile.
 
-```rs
+```rust
 fn main() {
     let x = vec![1, 2, 3];
     
@@ -466,19 +466,19 @@ Most of the time when specifying one of the `Fn` trait bounds, you can start wit
 
 To illustrate situations where closures that can capture their environment are useful as function parameters, let’s move on to our next topic: iterators.
 
-## Processing a series of items with Iterators ##
+## 2. Processing a series of items with Iterators ##
 The iterator pattern allows you to perform some task on a sequence of items in turn. An iterator is responsible for the logic of iterating over each item and determining when the sequence has finished. When you use iterators, you don’t have to reimplement that logic yourself.
 
 In Rust, iterators are *lazy*, meaning they have no effect until you call methods that consume the iterator to use it up. The next code creates an iterator over the items in the vector `v1` by calling the `iter` method defined on `Vec<T>`. This code by itself does not do anything useful.
 
-```rs
+```rust
 let v1 = vec![1, 2, 3];
 let v1_iter = v1.iter();
 ```
 
 Once we have created an iterator, we can use it in a variety of ways. Before, we used the `for` loop, the iterator is stored in the `v1_iter` variables, and no iteration takes place at that time. When the `for`  loop is called using the iterator in, `v1_iter`,, each element in the iterator is used in one iteration of the loop, which prints out each value.
 
-```rs
+```rust
 let v1 = vec![1, 2, 3];
 let v1_iter = v1.iter();
 
@@ -493,7 +493,7 @@ Iterators handle all that logic for you, cutting down on repetitive code you cou
 ### The Iterator Trait and the next Method ###
 All iterators implement a trait named Iterator that is defined in the standard library. The definition of the trait looks like this:
 
-```rs
+```rust
 pub trait Iterator {
     type Item;
     
@@ -508,7 +508,7 @@ The `Iterator` trait only requires implementors to define one method: the `next`
 
 We can call the next method on iterators directly; Below, we demonstrates what values are returned from repeated calls to `next` on the iterator created from the vector.
 
-```rs
+```rust
 #[test]
 fn iterator_demonstration() {
     let v1 = vec![1, 2, 3];
@@ -530,7 +530,7 @@ The `Iterator` trait has a number of different methods with default implementati
 
 Methods that call next are called *consuming adaptors*, because calling them uses up the iterator. One example is the `sum` method, which takes ownership of the iterator and iterates through the items by repeatedly calling `next`, thus consuming the iterator. As it iterates through, it adds each item to a running total and returns the total when iteration is complete. Next snippet has a test illustrating a use of the `sum` method:
 
-```rs
+```rust
 #[test]
 fn iterator_sum() {
     let v1 = vec![1, 2, 3];
@@ -549,7 +549,7 @@ Other methods defined on the `Iterator` trait, known as *iterator adaptors*, all
 
 Next example call the iterator adaptor method `map`, which takes a closure to call on each item to produce a new iterator. The closure here creates a new iterator in which each item form the vector has been incremented by 1. However, this code produces a warning:
 
-```rs
+```rust
 let v1: Vec<i32> = vec![1, 2, 3];
 v1.iter().map(|x| x + 1);
 ```
@@ -572,7 +572,7 @@ To fix this and consume the iterator, we’ll use the `collect` method, which we
 
 So, the next snippet collect the results of iterating over the iterator that is returned from the cqall to `map` into a vector. This vector will end up containing each item form the original vector incremented by 1.
 
-```rs
+```rust
 let v1: Vec<i32> = vec![1, 2, 3];
 let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
 
@@ -586,7 +586,7 @@ Now that we’ve introduced iterators, we can demonstrate a common use of closur
 
 In the next example, we use `filter` with a closure that capture the `shoe_size` variable from its environment to iterate over a collection fo `Shoe` struct instances. It will retunr only shoes that are the specified size.
 
-```rs
+```rust
 #[derive(PartialEq, Debug)]
 
 struct Shoe {
@@ -635,7 +635,7 @@ To demonstrate, let’s create an iterator that will only ever count from 1 to 5
 
 Next snippet has the definition of the `Counter` struct and an associated `new` function to create instances of `Counter`.
 
-```rs
+```rust
 struct Counter {
     count: u32,
 }
@@ -651,7 +651,7 @@ The `Counter` struct has one field named `count`. This field holds a `u32` value
 
 Next, we’ll implement the `Iterator` trait for our `Counter` type by defining the body of the next method to specify what we want to happen when this iterator is used, as shown below
 
-```rs
+```rust
 impl Iterator for Counter {
     type Item = u32;
     
@@ -674,7 +674,7 @@ We want our iterator to add 1 to the current state, so we initialized count to 0
 #### Using Our Counter Iterator’s next Method ####
 Once we have implemented the `Iterator` trait, we have an Iterator! Next code shows a test demonstrating that we can use the iterator functionality of our `Counter` struct by calling the `next` method on it directly, just as we did with the iterator created from a vector in the shoe example.
 
-```rs
+```rust
 #[test]
 fn calling_next_directly() {
     let mut counter = Counter::new();
@@ -695,7 +695,7 @@ We implemented the Iterator trait by defining the `next` method, so we can now u
 
 For example, if for some reason we wanted to take the values produced by an instance of Counter, pair them with values produced by another Counter instance after skipping the first value, multiply each pair together, keep only those results that are divisible by 3, and add all the resulting values together, we could do so, as shown below:
 
-```rs
+```rust
 #[test]
 
 fn using_other_iterator_trait_methods() {
@@ -713,13 +713,13 @@ Note that `zip` produces only four pairs; the theoretical fifth pair `(5, None)`
 
 All of these method calls are possible because we specified how the `next` method works, and the standard library provides default implementations for other methods that call `next`.
 
-## Improving our I/O Project ##
+## 3. Improving our I/O Project ##
 With this new knowledge about iterators, we can improve the I/O project in Chapter 12 by using iterators to make places in the code clearer and more concise. Let’s look at how iterators can improve our implementation of the `Config::new` function and the `search` function.
 
 ### Removing a clone Using an Iterator ###
 In the first implementation of the `minigrep` project we added a code that took a slice of `String` values and created an instance of the `Config` struct by indexing into the slice and cloning the values, allowing the `Config` struct to own thos values. Next snippet remember us the implementation of the `Config::new` function.
 
-```rs
+```rust
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
@@ -747,7 +747,7 @@ Once `Config::new` takes ownership of the iterator and stops using indexing oper
 #### Using the Returning Iterator Directly ####
 If we check the current state of our `minigrep` project the _main.rs_ file should look like this:
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -762,7 +762,7 @@ fn main() {
 
 We will change the start of the `main` function that we had to the next code. This won't compile until we updated `Config::new` as well.
 
-```rs
+```rust
 fn main() {
     let config = Config::new(env::&args()).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {}", err);
@@ -777,7 +777,7 @@ The `env::args` function returns an iterator! Rather than collecting the iterato
 
 Next, we need to update the definition of `Config::new`. In your I/O project’s *src/lib.rs* file, let’s change the signature of `Config::new` to look like the below code. This still won’t compile because we need to update the function body.
 
-```rs
+```rust
 impl Config {
     pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
         // --snip--
@@ -789,7 +789,7 @@ The standard library documentation for the `env::args` function shows that the t
 #### Using Iterator Trait Methods Instead of Indexing ####
 Next, we’ll fix the body of `Config::new`. The standard library documentation also mentions that `std::env::Args` implements the `Iterator` trait, so we know we can call the `next` method on it! Below the updates in the implementation of the `Config` struct inside the _lib.rs_:
 
-```rs
+```rust
 impl Config {
     pub fn new(mut args: std::env::Args) -> Result<Config, &'static str> {
         args.next();
@@ -816,7 +816,7 @@ Remember that the first value in the return value of `env::args` is the name of 
 ### Making Coder Clearer with Iterator Adaptors ###
 We can also take advantage of iterators in the search function in our I/O project. Currently the code of the `search` function is:
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let mut results = Vec::new();
 
@@ -832,7 +832,7 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
 
 We can write this code in a more concise way using iterator adaptor methods. Doing so also lets us avoid having a mutable intermediate `results` vector. The functional programming style prefers to minimize the amount of mutable state to make code clearer. Removing the mutable state might enable a future enhancement to make searching happen in parallel, because we wouldn’t have to manage concurrent access to the `results` vector. Below the changes using the iterator adaptors.
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     contents.lines()
         .filter(|line| line.contains(query))
@@ -846,7 +846,7 @@ The next logical question is which style you should choose in your own code and 
 
 But are the two implementations truly equivalent? The intuitive assumption might be that the more low-level loop will be faster. Let’s talk about performance.
 
-## Comparing Performance: Loops vs Iterators ##
+## 4. Comparing Performance: Loops vs Iterators ##
 To determine whether to use loops or iterators, you need to know which version of our search functions is faster: the version with an explicit `for` loop or the version with iterators.
 
 We ran a benchmark by loading the entire contents of *The Adventures of Sherlock Holmes* by Sir Arthur Conan Doyle into a `String` and looking for the word the in *the* contents. Here are the results of the benchmark on the version of `search` using the `for` loop and the version using iterators:

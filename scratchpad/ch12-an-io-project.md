@@ -203,7 +203,7 @@ This pattern is about _separating concerns_: `main.rs` handles running the progr
 #### Extracting the Argument Parser
 We’ll extract the functionality for parsing arguments into a function that `main` will call to prepare for moving the command line parsing logic to `src/lib.rs`. Next snippet shows the new start of `main` that calls a new function `parse_config,` which we’ll define in `src/main.r`s for the moment.
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -238,7 +238,7 @@ Another indicator that shows there’s room for improvement is the `config` part
 
 Next code shows the improvements to the `parse_config` function:
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -282,7 +282,7 @@ So far, we’ve extracted the logic responsible for parsing the command line arg
 
 So now that the purpose of the parse_config function is to create a `Config` instance, we can change `parse_config` from a plain function to a function named new that is associated with the `Config` struct. Making this change will make the code **more idiomatic**. We can create instances of types in the standard library, such as `String`, by calling `String::new`. Similarly, by changing `parse_config` into a new function associated with `Config`, we’ll be able to create instances of `Config` by calling `Config::new`. 
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -331,7 +331,7 @@ The line `index out of bounds: the len is 1 but the index is 1`` is an error mes
 #### Improving the Error Message
 Before, we add a check in the new function that will verify that the slice is long enough before accessing index 1 and 2. If the slice isn’t long enough, the program panics and displays a better error message than the `index out of bounds`` message.
 
-```rs
+```rust
 // --snip--
 fn new(args: &[String]) -> Config {
     if args.len() < 3 {
@@ -387,7 +387,7 @@ Returning an `Err` value from `Config::new` allows the `main` function to handle
 #### Calling Config::new and Handling Errors
 To handle the error case and print a user-friendly message, we need to update main to handle the `Result` being returned by `Config::new`. We’ll also take the responsibility of exiting the command line tool with a nonzero error code from `panic!` and implement it by hand. A nonzero exit status is a convention to signal to the process that called our program that the program exited with an error state.
 
-```rs
+```rust
 use std::process;
 
 fn main() {
@@ -420,7 +420,7 @@ Now that we’ve finished refactoring the configuration parsing, let’s turn to
 
 Next snippet, shows the extracted `run` function. For now, we are just making the small, incremental improvement of extracting the function. We are still defining the function in `src/main.rs`.
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -451,7 +451,7 @@ The `run` function now contains all the remaining logic from `main`, starting fr
 #### Returning Errors from the run Function
 With the remaining program logic separated into the `run` function, we can improve the error handling, as we did with `Config::new`. Instead of allowing the program to panic by calling `expect`, the `run` function will return a `Result<T, E>` when something goes wrong. This will let us further consolidate into `main` the logic around handling errors in user friendly way. Below the changes we need to make to the signature and the body of the `run` function.
 
-```rs
+```rust
 use std::error:Error;
 
 // --snip--
@@ -490,7 +490,7 @@ Rust tells us that our code ignored the Result value and the Result value might 
 #### Handling Errors Returned from run in main
 We’ll check for errors and handle them using a technique similar to one we used with `Config::new`, but with a slight difference.
 
-```rs
+```rust
 fn main() {
     // --snip--
     println!("Searching for {}", config.query);
@@ -520,7 +520,7 @@ Let’s move all the code that isn’t the main function from `src/main.rs` to `
 
 Next code show the content of the `src/lib.rs`
 
-```rs
+```rust
 use std::error::Error;
 use std::fs;
 
@@ -543,7 +543,7 @@ We’ve made liberal use of the `pub` keyword: on `Config`, on its fields and it
 
 Now we need to bring the code we moved to `src/lib.rs` into the scope of the binary crate in `src/main.rs`, as shown below:
  
-```rs
+```rust
 use std::env;
 use std::process;
 
@@ -580,7 +580,7 @@ We’ll test drive the implementation of the functionality that will actually do
 ### Writing a Failing Test ###
 Because we don’t need them anymore, let’s remove the `println!` statements from *src/lib.rs* and *src/main.rs* that we used to check the program’s behavior. Then, in *src/lib.rs*, we’ll add a tests module with a test function, as we did in Chapter 11. The test function specifies the behavior we want the search function to have: it will take a query and the text to `search` for the query in, and it will return only the lines from the text that contain the query. Below is the scheme of this test:
 
-```rs
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -605,7 +605,7 @@ This test searches for the string `"duct"`. The text we’re searching is three 
 
 We aren’t able to run this test and watch it fail because the test doesn’t even compile: the `search` function doesn’t exist yet! So now we’ll add just enough code to get the test to compile and run by adding a definition of the search function that always returns an empty vector, as shown the next code. Then the test should compile and fail because an empty vector does not match a vector containing the line `"safe, fast, productive"`
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     vec![]
 }
@@ -674,7 +674,7 @@ Let’s work through each step, starting with iterating through lines.
 #### Iterating Through Lines with the lines Method ####
 Rust has a helpful method to handle line by line iteration of string, conveniently name `lines`, that works like:
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     for line in contents.lines() {
         // do something with line
@@ -687,7 +687,7 @@ The `lines` method returns an iterator. Recall that before we used a `for` loop 
 #### Searching Each Line for the Query ####
 Next, we’ll check whether the current line contains our query string. Fortunately, strings have a helpful method named `contains` that does this for us! Add a call to the `contains` method in the search function, as shown below:
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     for line in contents.lines() {
         if line.contains(query) {
@@ -700,7 +700,7 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
 #### Storing Matching Lines ####
 We also need a way to store the lines that contain our query string. For that, we can make a mutable vector before the `for` loop and call the push method to store a `line` in the vector. After the `for` loop, we return the vector, as show next:
 
-```rs
+```rust
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let mut results = Vec::new();
 
@@ -731,7 +731,7 @@ At this point, we could consider opportunities for refactoring the implementatio
 #### Using the search Function in the run Function ####
 Now that the `search` function is working and tested, we need to call `search` from our `run` function. We need to pass the `config.query` value and the contents that `run` reads from the file to the `search` function. Then `run` will print each line returned from search:
 
-```rs
+```rust
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.filename)?;
 
@@ -784,7 +784,7 @@ We’ll improve `minigrep` by adding an extra feature: an option for case-insens
 ### Writing a Failing Test for the Case-Insensitive search Function ###
 We want to add a new `search_case_insensitive` function that we’ll call when the environment variable is on. We’ll continue to follow the TDD process, so the first step is again to write a failing test. We’ll add a new test for the new `search_case_insensitive` function and rename our old test from `one_result` to `case_sensitive` to clarify the differences between the two tests, as shown here:
 
-```rs
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -828,7 +828,7 @@ The new test for the `case-insensitive` search uses `"rUsT"` as its query. In th
 ### Implementing the search_case_insensitive Function ###
 The `search_case_insensitive` function will be almost the same as the search function. The only difference is that we’ll lowercase the query and each line so whatever the case of the input arguments, they’ll be the same case when we check whether the line contains the query.
 
-```rs
+```rust
 pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
     let mut results = Vec::new();
@@ -845,7 +845,7 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
 
 Great! They passed. Now, let’s call the new `search_case_insensitive` function from the `run` function. First, we’ll add a configuration option to the Config struct to switch between case-sensitive and case-insensitive search. Adding this field will cause compiler errors because we aren’t initializing this field anywhere yet:
 
-```rs
+```rust
 pub struct Config {
     pub query: String,
     pub filename: String,
@@ -854,7 +854,7 @@ pub struct Config {
 ```
 Note that we added the `case_sensitive` field that holds a Boolean. Next, we need the `run` function to check the `case_sensitive` field’s value and use that to decide whether to call the `search` function or the `search_case_insensitive` function, as shown below:
 
-```rs
+```rust
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.filename)?;
 
@@ -874,7 +874,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
 Finally, we need to check for the environment variable. The functions for working with environment variables are in the `env` module in the standard library, so we want to bring that module into scope with a `use std::env`; line at the top of *src/lib.rs*. Then we’ll use the var function from the `env` module to check for an environment variable named `CASE_INSENSITIVE`, as shown this snippet:
 
-```rs
+```rust
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
@@ -961,7 +961,7 @@ Yup, our error message is being printed to standard output. It’s much more use
 ### Printing Errors to Standard Error ###
 Because of the refactoring we did earlier in this chapter, all the code that prints error messages is in one function, `main`. The standard library provides the `eprintln!` macro that prints to the standard error stream, so let’s change the two places we were calling `println!` to print errors to use `eprintln!` instead.
 
-```rs
+```rust
 fn main() {
     let args: Vec<String> = env::args().collect();
 

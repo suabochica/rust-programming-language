@@ -42,7 +42,7 @@ We’ll demonstrate the first situation in the “Enabling Recursive Types with 
 ### Using a Box to Store Data on the Heap
 Before we discuss this use case for `Box<T>`, we’ll cover the syntax and how to interact with values stored within a `Box<T>`.
 
-```rs
+```rust
 fn main() {
     let b = Box::new(5);
     println!("b = {}", b);
@@ -69,7 +69,7 @@ Although functional programming languages use cons lists frequently, the cons li
 
 Next snippet contains an enum definition for a cons list. Note that this code won’t compile yet because the `List` type doesn’t have a known size, which we’ll demonstrate.
 
-```rs
+```rust
 enum List {
     Cons(i32, List),
     Nil,
@@ -80,7 +80,7 @@ enum List {
 
 Using the `List` type to store the list `1, 2, 3` would look like 
 
-```rs
+```rust
 use crate::List::{Cons, Nil};
 
 fn main() {
@@ -105,7 +105,7 @@ The error shows this type “has infinite size.” The reason is that we’ve de
 #### Computing the Size of a Non-Recursive Type
 Recall the `Message` enum we defined in chapter 6 during the enum definitions:
 
-```rs
+```rust
 enum Message {
     Quit,
     Move { x: i32, y: i32 },
@@ -134,7 +134,7 @@ Because a `Box<T>` is a pointer, Rust always knows how much space a `Box<T>` nee
 
 We can change the definition of `List` enum and the usage of `List` code. The next code have these modifications and it will compile:
 
-```rs
+```rust
 enum List {
     Cons(i32, Box<List>),
     Nil,
@@ -166,7 +166,7 @@ Let’s first look at how the dereference operator works with regular references
 ### Following the Pointer to the Value with the Dereference Operator
 A regular reference is a type of pointer, and one way to think of a pointer is as an arrow to a value stored somewhere else. In the next snippet, we create a reference to an i32 value and then use the dereference operator to follow the reference to the data:
 
-```rs
+```rust
 fn main() {
    let x = 5;
    let y = &x;
@@ -183,7 +183,7 @@ If we tried to write `assert_eq(5, y);` instead we get a compilation error. Comp
 ### Using Box Like a Reference
 We can rewrite the last snippet using `Box<T>` instead of a reference. The dereference operator will work as shown below:
 
-```rs
+```rust
 fn main() {
    let x = 5;
    let y = Box::new(x);
@@ -200,7 +200,7 @@ Let’s build a smart pointer similar to the `Box<T>` type provided by the stand
 
 The `Box<T>` type is ultimately defined as a tuple struct with one element, so the next implementation defines a `MyBox<`T> type in the same way. We’ll also define a new function to match the new function defined on `Box<T>`.
 
-```rs
+```rust
 struct MyBox<T>(T);
 
 impl<T> MyBox<T> {
@@ -215,7 +215,7 @@ We define a struct named `MyBox` and declare a generic parameter `T`, because we
 Let’s try adding the `main` function in the last codes and changing it to use the `MyBox<T>` type we’ve defined instead of `Box<T>`. The next code won’t compile because Rust doesn’t know how to dereference `MyBox`.
 
 
-```rs
+```rust
 fn main() {
    let x = 5;
    let y = MyBox::new(x);
@@ -227,7 +227,7 @@ fn main() {
 
 Here is the resulting compilation error:
 
-```rs
+```rust
 $ cargo run
     Compiling deref-example v0.1.0 (file:///projects/deref-example)
     error[E0614]: type `MyBox<{integer}>` cannot be dereferenced
@@ -238,7 +238,7 @@ Our `MyBox<T>` type can’t be dereferenced because we haven’t implemented tha
 ### Treating a Type Like a Reference by Implementing the Deref Trait
 As discussed in Chapter 10, to implement a trait, we need to provide implementations for the trait’s required methods. The `Deref` trait, provided by the standard library, requires us to implement one method named `deref` that borrows self and returns a reference to the inner data. Next snippet contains an implementation of `Deref` to add to the definition of `MyBox`:
 
-```rs
+```rust
 use std::ops::Deref;
 
 impl<T> Deref for MyBox<T> {
@@ -275,14 +275,14 @@ Deref coercion was added to Rust so that programmers writing function and method
 
 To see deref coercion in action, let's use the `MyBoxM<T>` as well as the implementation of `Deref`. Next snippet shows the definition of a function that has a string slice parameter:
 
-```rs
+```rust
 fn hello (name: $str) {
     println!("Hello, {}!", name);
 }
 ```
 We can call the `hello` function with a string slice as an argument, such as `hello("Rust");` for example. Deref coercion makes it possible to call `hello` with a reference to a value of type `MyBox<String>`, as shown next:
 
-```rs
+```rust
 fn main() {
    let m = myBox::new(String::from("Rust"));
    hello(&m);
@@ -294,7 +294,7 @@ Here we’re calling the `hello` function with the argument `&m`, which is a ref
 If Rust didn’t implement deref coercion, we would have to write the code to call `hello` with a value of type `&MyBox<String>`.
 
 
-```rs
+```rust
 fn main() {
    let m = myBox::new(String::from("Rust"));
    hello(&(*m)[..]);
@@ -329,7 +329,7 @@ Specify the code to run when a value goes out of scope by implementing the `Drop
 
 Next code shows a `CustomSmartPointer` struct whose only custom functionality is that it will print `Dropping CustomSmartPointer!` when the instance goes out of the scope. This example demonstrates when Rust runt the `drop` function.
 
-```rs
+```rust
 struct CustomSmartPointer {
     data: String,
 }
@@ -374,7 +374,7 @@ Unfortunately, it’s not straightforward to disable the automatic `drop` functi
 
 If we try to call the `Drop` trait's `drop` method manually by modifying the `main` function in our last code sable we will get a compile error:
 
-```rs
+```rust
 fn main() {
     let c = CustomSmartPointer {
         data: String::from("some data"),
@@ -404,7 +404,7 @@ We can’t disable the automatic insertion of `drop` when a value goes out of sc
 The `std::mem::drop` function is different from the drop method in the `Drop` trait. We call it by passing the value we want to force to be dropped early as an argument. The function is in the prelude, so we can modify main as shown below:
 
 
-```rs
+```rust
 fn main() {
     let c = CustomSmartPointer {
         data: String::from("some data"),
@@ -418,7 +418,7 @@ fn main() {
 
 Running this code will print the following:
 
-```rs
+```rust
 $ cargo run
    Compiling drop-example v0.1.0 (file:///projects/drop-example)
        Finished dev [unoptimized + debuginfo] target(s) in 0.73s
@@ -459,7 +459,7 @@ We’ll create list `a` that contains `5` and then `10`. Then we’ll make two m
 
 Trying to implement this scenario using our definition of `List` with `Box<T>` won't work, as shown the next snippet:
 
-````rs
+```rust
 enum List {
     Const(i32, Box<List>),
     Nil,
@@ -494,7 +494,7 @@ We could change the definition of `Cons` to hold references instead, but then we
 
 Instead, we will change our definition of `List` to use `Rc<T>` in place to `Box<T>`. Each `Cons` variant will now hold a value and an `Rc<T>` pointing to a `List`. When we create `b`, instead of taking ownership of `a`, we’ll clone the `Rc<List>` that `a` is holding, thereby increasing the number of references from one to two and letting `a` and `b` share ownership of the data in that `Rc<List>`. We’ll also clone `a` when creating `c`, increasing the number of references from two to three. Every time we call `Rc::clone`, the reference count to the data within the `Rc<List>` will increase, and the data won’t be cleaned up unless there are zero references to it.
 
-```rs
+```rust
 enum List {
     Const(i32, Rc<List>),
     Nil,
@@ -585,7 +585,7 @@ Mutating the values inside an immutable value is the _interior mutability_ patte
 
 A consequence of the borrowing rules is that when you have an immutable value, you can’t borrow it mutably. For example, this code won’t compile:
 
-```rs
+```rust
 fn main() {
    let x = 5;
    let y = &mut x;
@@ -613,7 +613,7 @@ Here’s the scenario we’ll test: we’ll create a library that tracks a value
 
 Our library will only provide the functionality of tracking how close to the maximum a value is and what the messages should be at what times. Applications that use our library will be expected to provide the mechanism for sending the messages: the application could put a message in the application, send an email, send a text message, or something else. The library doesn’t need to know that detail. All it needs is something that implements a trait we’ll provide called Messenger. Here is the code of our library:
 
-```rs
+```rust
 pub trait Messenger {
     fn send(&self, msg: &str);
 }
@@ -656,7 +656,7 @@ One important part of this code is that the `Messenger` trait has one method cal
 
 We need a mock object that, instead of sending an email or text message when we call send, will only keep track of the messages it’s told to send. We can create a new instance of the mock object, create a `LimitTracker` that uses the mock object, call the `set_value` method on `LimitTracker`, and then check that the mock object has the messages we expect. Below we have an attempt to implement a mock object to do just that, but the borrow checker won't allow it:
 
-```rs
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -712,7 +712,7 @@ We can’t modify the `MockMessenger` to keep track of the messages, because the
 
 This is a situation in which interior mutability can help! We’ll store the `sent_messages` within a `RefCell<T>`, and then the `send` message will be able to modify `sent_messages` to store the messages we’ve seen. Next code shows what that looks like:
 
-```rs
+```rust
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -764,7 +764,7 @@ The `RefCell<T>` keeps track of how many `Ref<T>` and `RefMut<T>` smart pointers
 
 If we try to violate these rules, rather than getting a compiler error as we would with references, the implementation of `RefCell<T>` will panic at runtime. Next code shows a modification of the implementation of `send` method. We are deliberately trying to create two mutable borrows active for the same scope to illustrate that `RefCell<T>` prevents us from doing this at  run time.
 
-```rs
+```rust
     impl Messenger for MockMessenger {
         fn send(&self, message: &str) {
             let mut one_borrow = self.sent_messages.borrow_mut();
@@ -817,7 +817,7 @@ A common way to use `RefCell<T>` is in combination with `Rc<T>`. Recall that `Rc
 
 For example, recall the cons list recursion example where we used `Rc<T`> to allow multiple lists to share ownership of another list. Because `Rc<T>` holds only immutable values, we can’t change any of the values in the list once we’ve created them. Let’s add in `RefCell<T>` to gain the ability to change the values in the lists. Next snippet shows that by using a `RefeCell<T>` in the `Const` definition, we can modify the value stored in all the lists.
 
-```rs
+```rust
 #[derive(Debug)]
 enum List {
     Cons(Rc<RefCell<i32>>, Rc<List>),
@@ -872,7 +872,7 @@ Rust’s memory safety guarantees make it difficult, but not impossible, to acci
 
 Let's look at how a reference cycle might happen and how to prevent it, starting with the definition of the `List` enum and a `tail` method in the next snippet:
 
-```rs
+```rust
 use crate::List::{Cons, Nil};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -899,7 +899,7 @@ Here, we’re using another variation of the `List` definition. The second eleme
 
 In the `main` function we will use the definitions of our `List` Implementation. The next code creates a list in `a` and a list in `b` that points to the list in `a`. Then it modifies the list in `a` to point to `b`, creating a reference cycle. There are `println!` statements along the way to show what the reference counts are at various points in this process.
 
-```rs
+```rust
 fn main() {
     let a = Rc::new(Cons(5, RefCell::new(Rc::new(Nil))));
 
@@ -973,7 +973,7 @@ As an example, rather than using a list whose items know only about the next ite
 
 To start, we’ll build a tree with nodes that know about their child nodes. We’ll create a struct named Node that holds its own `i32` value as well as references to its children `Node` values:
 
-```rs
+```rust
 use std::cell:RefCell;
 use std::rc::Rc;
 
@@ -988,7 +988,7 @@ We want a `Node` to own its children, and we want to share that ownership with v
 
 Next, we’ll use our struct definition and create one Node instance named leaf with the value 3 and no children, and another instance named branch with the value 5 and leaf as one of its children, as shown below:
 
-```rs
+```rust
 fn main() {
     let leaf = Rc::new(Node {
         value: 3,
@@ -1012,7 +1012,7 @@ Thinking about the relationships another way, a parent node should own its child
 
 So instead of `Rc<T>`, we’ll make the type of parent use `Weak<T>`, specifically a `RefCell<Weak<Node>>`. Now our `Node` struct definition looks like this:
 
-```rs
+```rust
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
@@ -1026,7 +1026,7 @@ struct Node {
 
 A node will be able to refer to its parent node but doesn’t own its parent, Let's now update the `main` to use this new definition so the `leaf` node will have a way to refer to its parent, `branch`:
 
-```rs
+```rust
 fn main() {
     let leaf = Rc::new(Node {
         value: 3,
@@ -1072,7 +1072,7 @@ The lack of infinite output indicates that this code didn’t create a reference
 
 Let’s look at how the `strong_count` and `weak_count` values of the `Rc<Node>` instances change by creating a new inner scope and moving the creation of branch into that scope. By doing so, we can see what happens when branch is created and then dropped when it goes out of scope. The modifications are shown below:
 
-```rs
+```rust
 fn main() {
     let leaf = Rc::new(Node {
         value: 3,

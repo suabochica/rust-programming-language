@@ -114,7 +114,7 @@ For example, say we had two function: one that finds the largest item in a slice
 2. Traits: Defining Shared Behavior
 3. Validating References with Lifetimes
 
-## Generic Data Types
+## 1. Generic Data Types
 We can use generics to create definitions for items like functions signatures or structs, which w can then use with many different concrete data types. Let's first look at how to define functions, structs, enums, and methods using generics. Then we will discuss how generics affect code performance.
 
 ### In Function Definitions
@@ -422,7 +422,8 @@ fn main() {
 
 Because Rust compile generics code into code that specifies the type in each instance, we pay no runtime cost for using generics. When the code runs, it performs just as it would if we had duplicated each definition by hand. The process of monomorphization makes Rust's generics extremely efficient at runtime.
 
-## Traits: Defining Shared Behavior
+## 2. Traits: Defining Shared Behavior
+
 A _trait_ tells the Rust compiler about functionality a particular type has and can share with other types. We can use traits to define shared behavior in an abstract way.. We can use trait bounds or specify that a generic can be any type that has certain behavior.
 
 > Note: Traits are similar to a feature often called _interfaces_ in other languages, although with some differences.
@@ -499,6 +500,7 @@ One restriction to note with trait implementation is that we can implement a tra
 But we cannot implement external traits on external types. For example, we cannot implement the `Display` trait on `Vec<T>` within our `aggregator` crate, because `Display` and `Vec<T>` are defined in the standard library and are not local to our `aggregator` crate. This restriction is part of a property of program called _coherence_, and more specifically the _orphan rule_, so named because the parent type is not present. This rules ensure that other people's code cannot break your code and vice versa. Without the rule, two crates could implement the same trait for the same type, and Rust would not know which implementation to use.
 
 ### Default Implementations
+
 Sometimes it is useful to have default behavior for some or all of the methods in a trait instead of requiring implementations for all method on every type. Then, as we implement the trait on a particular type, we can keep or override each method's default behavior.
 
 Next code shows how to specify a default string for the `summarize` method of the `Summary` trait instead of only defining the method signature.
@@ -814,7 +816,8 @@ Traits and trait bounds let us write code that uses generic type parameters to r
 
 Another kind of generic that we’ve already been using is called _lifetimes_. Rather than ensuring that a type has the behavior we want, lifetimes ensure that references are valid as long as we need them to be. Let’s look at how lifetimes do that.
 
-## Validating References with Lifetimes
+## 3. Validating References with Lifetimes
+
 One detail we didn’t discuss in the “References and Borrowing” section in Chapter 4 is that every reference in Rust has a _lifetime_, which is the scope for which that reference is valid. Most of the time, lifetimes are implicit and inferred, just like most of the time, types are inferred. We must annotate types when multiple types are possible. In a similar way, we must annotate lifetimes when the lifetimes of references could be related in a few different ways. Rust requires us to annotate the relationships using generic lifetime parameters to ensure the actual references used at runtime will definitely be valid.
 
 The concept of lifetimes is somewhat different from tools in other programming languages, arguably making lifetimes Rust’s most distinctive feature. Although we won’t cover lifetimes in their entirety in this chapter, we’ll discuss common ways you might encounter lifetime syntax so you can become familiar with the concepts.
@@ -1186,6 +1189,7 @@ fn longest_with_an_announcement<'a, T>(x: &'a str, ann: T) -> &'a str
 This is the `longest` function that returns the longer of two string slices. But now it has an extra parameter named `ann` of the generic type `T`, which can be filled in by any type that implements the `Display` trait as specified by the where clause. This extra parameter will be printed before the function compares the lengths of the string slices, which is why the `Display` trait bound is necessary. Because lifetimes are a type of generic, the declarations of the lifetime parameter `'a` and the generic type parameter `T` go in the same list inside the angle brackets after the function name.'
 
 ## Summary
+
 We covered a lot in this chapter! Now that you know about generic type parameters, traits and trait bounds, and generic lifetime parameters, you’re ready to write code without repetition that works in many different situations. Generic type parameters let you apply the code to different types. Traits and trait bounds ensure that even though the types are generic, they’ll have the behavior the code needs. You learned how to use lifetime annotations to ensure that this flexible code won’t have any dangling references. And all of this analysis happens at compile time, which doesn’t affect runtime performance!
 
 Believe it or not, there is much more to learn on the topics we discussed in this chapter: Chapter 17 discusses trait objects, which are another way to use traits. Chapter 19 covers more complex scenarios involving lifetime annotations as well as some advanced type system features. But next, you’ll learn how to write tests in Rust so you can make sure your code is working the way it should.

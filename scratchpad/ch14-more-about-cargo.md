@@ -70,7 +70,7 @@ Accurately documenting your packages will help other users know how and when to 
 
 Documentation comments use three slashes, ///, instead of two and support Markdown notation for formatting the text. Place documentation comments just before the item they’re documenting. Below we use the documentation comments for an `add_one` function in a crate named `my_crate`:
 
-```rs
+```rust
 /// Adds one to the number given.
 ///
 /// # Examples
@@ -147,7 +147,7 @@ The good news is that if the structure `isn’t` convenient for others to use fr
 
 For example, say we made a library named `art` for modeling artistic concepts. Within this library are two modules: a `kinds` module containing two enums named `PrimaryColor` and `SecondaryColor` and a `utils` module containing a function named `mix`, as shown next:
 
-```rs
+```rust
 // src/lib.rs
 //! # Art
 //!
@@ -189,7 +189,7 @@ Note that the PrimaryColor and SecondaryColor types aren’t listed on the front
 
 Another crate that depends on this library would need use statements that bring the items from art into scope, specifying the module structure that’s currently defined. Next example uses the `PrimaryColor` and the `mix` items from the `art` crate:
 
-```rs
+```rust
 // src.main.rs
 use art::kinds::PrimaryColor;
 use art::utils::mix;
@@ -206,7 +206,7 @@ Now, to use the `art` crate we had to figure out that `PrimaryColor` is in the `
 
 To remove the internal organization from the public API, we can modify the `art` crate code adding the `pub use` statements to re-export the items at the top level, as shown below:
 
-```rs
+```rust
 //src/lib.rs
 //! # Art
 //!
@@ -233,7 +233,7 @@ The API documentation that cargo doc generates for this crate will now list and 
 
 The `art` crate users can still see and use the internal structure, or they can use a more convenient structure after re-export the modules, as shown next:
 
-```rs
+```rust
 user art::PrimaryColor;
 user art::mix;
 
@@ -423,7 +423,7 @@ Your add directory should now have these directories and files:
 
 Now, let's add the `add_one` function in _add-one/src/lib.rs_ file:
 
-```rs
+```rust
 pub fn add_one(x: i32) -> i32 {
     x + 1
 }
@@ -439,7 +439,7 @@ Cargo doesn’t assume that crates in a workspace will depend on each other, so 
 
 Next, let’s use the `add_one` function from the `add-one` crate in the `adder` crate. Open the *adder/src/main.rs* file and add a `use` line at the top to bring the new `add-one` library crate into scope. Then change the `main` function to call the `add_one` function, as shown next:
 
-```rs
+```rust
 use add_one;
 
 fn main() {
@@ -502,7 +502,7 @@ To fix this, edit the *Cargo.toml* file for the `adder` crate and indicate that 
 #### Adding a Test to a Workspace
 For another enhancement, let's add a test of the `add_one::add_one` function withing the `add_one` crate:
 
-```rs
+```rust
 #![allow(unused_variables)]
 
 pub fn add_one(x: i32) -> i32 {

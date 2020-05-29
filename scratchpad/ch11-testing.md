@@ -14,7 +14,7 @@ Testing is a complex skill: although we can’t cover every detail about how to 
 2. Controlling How Test are Run
 3. Test Organization
 
-## How to Write Tests
+## 1. How to Write Tests
 Tests are Rust functions that verify that the non-test code is functioning in the expected manner. The bodies of test functions typically perform these three actions:
 
 1. Set up any needed data or state.
@@ -441,7 +441,7 @@ You can’t use the `#[should_panic]` annotation on tests that use `Result<T, E>
 
 Now that you know several ways to write tests, let’s look at what is happening when we run our tests and explore the different options we can use with `cargo test`.
 
-## Controlling How Test Are Run
+## 2. Controlling How Test Are Run
 Just as `cargo run` compiles your code and then runs the resulting binary, `cargo test` compiles your code in test mode and runs the resulting test binary. You can specify command line options to change the default behavior of `cargo test`. For example, the default behavior of the binary produced by `cargo test` is to run all the tests in parallel and capture output generated during test runs, preventing the output from being displayed and making it easier to read the output related to the test results.
 
 Some command line options go to `cargo test`, and some go to the resulting test binary. To separate these two types of arguments, you list the arguments that go to `cargo test` followed by the separator `--` and then the ones that go to the test binary. Running `cargo test --help` displays the options you can use with cargo test, and running `cargo test -- --help` displays the options you can use after the separator `--`.
@@ -665,7 +665,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out
 
 By controlling which tests run, you can make sure your cargo test results will be fast. When you’re at a point where it makes sense to check the results of the ignored tests and you have time to wait for the results, you can run `cargo test -- --ignored` instead.
 
-## Test Organization
+## 3. Test Organization
 
 As mentioned at the start of the chapter, testing is a complex discipline, and different people use different terminology and organization. The Rust community thinks about tests in terms of two main categories:
 
