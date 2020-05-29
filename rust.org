@@ -55,3 +55,8 @@
    CLOSED: [2020-05-22 Fri 08:23]
 ** DONE References Cycles can Leak Memory
    CLOSED: [2020-05-28 Thu 08:20]
+* Chapter 16: Fearless Concurrency
+** TODO Using Threads to Run Code
+** TODO Using Message Passing to Transfer Data
+** TODO Shared State Concurrency
+** TODO Extensible Concurrency with The Sync and Send Traits
